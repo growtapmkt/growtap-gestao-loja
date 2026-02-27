@@ -1,0 +1,1394 @@
+
+import React, { useState, useEffect } from 'react';
+import { ClipboardCheck, Clock, CheckCircle2, AlertCircle, Search, Plus, MoreHorizontal, ShoppingCart, Trash2, X, User, CheckCircle, Package, ArrowLeft, Loader2, Eye, Trash, Pencil, Calendar, XCircle, CreditCard, Banknote, QrCode, MapPin } from 'lucide-react';
+
+const Conditionals: React.FC = () => {
+  const [conditionals, setConditionals] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [clients, setClients] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // POS States
+  const [showPOS, setShowPOS] = useState(false);
+  const [showPOSCheckout, setShowPOSCheckout] = useState(false);
+  const [cart, setCart] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Checkout/Creation Data
+  const [checkoutData, setCheckoutData] = useState({
+    clientId: '',
+    returnDate: '',
+    observation: '',
+    orderNotes: '',
+    clientSearch: '',
+    discount: 0,
+    discountType: 'FIXED' as 'FIXED' | 'PERCENTAGE',
+    deliveryFee: 0,
+    deliveryMethod: 'PICKUP'
+  });
+  const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
+  const [clientSearch, setClientSearch] = useState('');
+
+  // Modal State
+  const [selectedCond, setSelectedCond] = useState<any>(null);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editForm, setEditForm] = useState({
+    returnDate: '',
+    observation: '',
+    orderNotes: '',
+    clientId: '',
+    discount: 0,
+    discountType: 'FIXED' as 'FIXED' | 'PERCENTAGE',
+    deliveryFee: 0,
+    deliveryMethod: 'PICKUP'
+  });
+
+  // Payment Selection Modal for Finalizing
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [pendingFinalize, setPendingFinalize] = useState<{ id: string, partialItems?: any[] } | null>(null);
+
+  // Partial Settlement State
+  const [isSettling, setIsSettling] = useState(false);
+  const [settlementQuantities, setSettlementQuantities] = useState<Record<string, number>>({});
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeFilter, setActiveFilter] = useState('Todos');
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    const preSelectedId = sessionStorage.getItem('pre_selected_client_id');
+    if (preSelectedId) {
+      setCheckoutData(prev => ({ ...prev, clientId: preSelectedId }));
+      setShowPOS(true);
+      sessionStorage.removeItem('pre_selected_client_id');
+    }
+  }, []);
+
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const [condRes, prodRes, clientRes] = await Promise.all([
+        fetch(`${import.meta.env.VITE_API_URL}/conditionals`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${import.meta.env.VITE_API_URL}/products`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${import.meta.env.VITE_API_URL}/clients`, { headers: { 'Authorization': `Bearer ${token}` } })
+      ]);
+
+      const condData = await condRes.json();
+      const prodData = await prodRes.json();
+      const clientData = await clientRes.json();
+
+      setConditionals(condData.conditionals || []);
+      setProducts(prodData.products || []);
+      setClients(clientData.clients || []);
+    } catch (error) {
+      console.error('Erro ao buscar dados:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const addToCart = (product: any, variation: any) => {
+    const existingIndex = cart.findIndex(item => item.variationId === variation.id);
+    const finalPrice = product.isPromotionalPrice && product.promotionalPrice ? product.promotionalPrice : product.price;
+
+    if (existingIndex > -1) {
+      // Toggle logic: If clicked again, remove from cart
+      removeFromCart(variation.id);
+    } else {
+      if (variation.quantity < 1) {
+        alert('Produto sem estoque!');
+        return;
+      }
+      setCart([...cart, {
+        productId: product.id,
+        productName: product.name,
+        variationId: variation.id,
+        color: variation.color,
+        size: variation.size,
+        price: finalPrice,
+        quantity: 1,
+        maxStock: variation.quantity
+      }]);
+    }
+  };
+
+  const removeFromCart = (variationId: string) => {
+    setCart(cart.filter(item => item.variationId !== variationId));
+  };
+
+  const updateCartQuantity = (variationId: string, delta: number) => {
+    const newCart = cart.map(item => {
+      if (item.variationId === variationId) {
+        const nextQty = item.quantity + delta;
+        if (nextQty > 0 && nextQty <= item.maxStock) {
+          return { ...item, quantity: nextQty };
+        }
+      }
+      return item;
+    });
+    setCart(newCart);
+  };
+
+  const handleCreateConditional = async () => {
+    if (cart.length === 0) return;
+    if (!checkoutData.clientId) {
+      alert('Selecione um cliente para a condicional.');
+      return;
+    }
+    if (!checkoutData.returnDate) {
+      alert('Defina uma data de retorno.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/conditionals`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          clientId: checkoutData.clientId,
+          items: cart.map(item => ({
+            variationId: item.variationId,
+            quantity: item.quantity
+          })),
+          returnDate: checkoutData.returnDate,
+          observation: checkoutData.observation,
+          orderNotes: checkoutData.orderNotes,
+          discount: checkoutData.discount,
+          discountType: checkoutData.discountType,
+          deliveryFee: checkoutData.deliveryFee,
+          deliveryMethod: checkoutData.deliveryMethod
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setShowPOS(false);
+        setShowPOSCheckout(false);
+        setCart([]);
+        setCheckoutData({
+          clientId: '', returnDate: '', observation: '', clientSearch: '',
+          orderNotes: '', discount: 0, discountType: 'FIXED',
+          deliveryFee: 0, deliveryMethod: 'PICKUP'
+        });
+        setSelectedDuration(null);
+        setClientSearch('');
+        fetchData();
+        alert('Condicional gerada com sucesso!');
+      } else {
+        alert(data.message);
+      }
+    } catch (error) {
+      alert('Erro ao criar condicional.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleReturn = async (id: string) => {
+    if (!confirm('Deseja marcar essa condicional como devolvida? O estoque de todas as peças será estornado.')) return;
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/conditionals/${id}/return`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchData();
+        setShowViewModal(false);
+        alert('Items devolvidos ao estoque!');
+      }
+    } catch (err) {
+      alert('Erro ao processar devolução.');
+    }
+  };
+
+  const handleFinalize = (id: string, partialItems?: any[]) => {
+    setPendingFinalize({ id, partialItems });
+    setShowPaymentModal(true);
+  };
+
+  const confirmFinalize = async (paymentMethod: string) => {
+    if (!pendingFinalize) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/conditionals/${pendingFinalize.id}/finalize`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          paymentMethod,
+          items: pendingFinalize.partialItems
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(pendingFinalize.partialItems ? 'Venda parcial finalizada e demais itens devolvidos.' : 'Venda total finalizada com sucesso!');
+        fetchData();
+        setShowViewModal(false);
+        setIsSettling(false);
+        setShowPaymentModal(false);
+        setPendingFinalize(null);
+      } else {
+        alert(data.message);
+      }
+    } catch (err) {
+      alert('Erro ao finalizar venda.');
+    }
+  };
+
+  const handleUpdate = async () => {
+    if (!selectedCond) return;
+    setIsSubmitting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/conditionals/${selectedCond.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(editForm)
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchData();
+        setIsEditMode(false);
+        setShowViewModal(false);
+        alert('Condicional atualizada com sucesso!');
+      }
+    } catch (err) {
+      alert('Erro ao atualizar condicional.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Deseja realmente excluir? Se a condicional estiver pendente, o estoque será devolvido.')) return;
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`${import.meta.env.VITE_API_URL}/conditionals/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      fetchData();
+      setShowViewModal(false);
+    } catch (err) {
+      alert('Erro ao excluir.');
+    }
+  };
+
+  const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+  const cartTotal = checkoutData.discountType === 'PERCENTAGE'
+    ? (subtotal - (subtotal * (checkoutData.discount / 100))) + Number(checkoutData.deliveryFee)
+    : (subtotal - Number(checkoutData.discount)) + Number(checkoutData.deliveryFee);
+  const filteredProducts = products.filter(p => {
+    const query = searchQuery.toLowerCase();
+    const hasStock = p.variations?.some((v: any) => v.quantity > 0);
+    return hasStock && ((p.name?.toLowerCase().includes(query)) || (p.sku?.toLowerCase().includes(query)));
+  });
+
+  const stats = [
+    { label: 'Condicionais Ativas', value: conditionals.filter(c => c.status === 'PENDING' || c.status === 'OVERDUE').length.toString(), icon: ClipboardCheck, color: 'text-green-600', bg: 'bg-green-50' },
+    { label: 'Prazo Atrasado', value: conditionals.filter(c => c.status === 'OVERDUE').length.toString(), icon: Clock, color: 'text-red-600', bg: 'bg-red-50' },
+    { label: 'Vendas Convertidas', value: conditionals.filter(c => c.status === 'FINISHED').length.toString(), icon: ShoppingCart, color: 'text-[#0158ad]', bg: 'bg-blue-50' },
+    { label: 'Valor Pendente', value: `R$ ${conditionals.filter(c => c.status === 'PENDING' || c.status === 'OVERDUE').reduce((acc, c) => acc + c.total, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, icon: AlertCircle, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+  ];
+
+  const filteredConditionals = conditionals.filter(c => {
+    if (activeFilter === 'Ativos') return c.status === 'PENDING' || c.status === 'OVERDUE';
+    if (activeFilter === 'Atrasados') return c.status === 'OVERDUE';
+    if (activeFilter === 'Finalizados') return c.status === 'FINISHED' || c.status === 'RETURNED';
+    return true;
+  });
+
+  if (showPOS) {
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="lg:col-span-12 xl:col-span-8 space-y-6">
+          {!showPOSCheckout ? (
+            <>
+              <div className="flex items-center gap-4">
+                <button onClick={() => setShowPOS(false)} className="p-2 bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-slate-800 transition-colors">
+                  <ArrowLeft size={20} />
+                </button>
+                <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Nova Condicional</h3>
+              </div>
+              <div className="relative sticky top-0 z-20 bg-slate-50 pb-4 pt-1 md:static md:bg-transparent md:p-0">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={24} />
+                <input
+                  type="text"
+                  placeholder="Pesquisar por nome ou SKU..."
+                  className="w-full pl-14 pr-6 py-4 md:py-5 bg-white border border-slate-200 rounded-[24px] text-lg font-medium focus:outline-none focus:ring-4 focus:ring-[#0158ad]/10 shadow-sm transition-all"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-[55vh] md:h-[calc(100vh-320px)] overflow-y-auto pr-2 custom-scrollbar pb-20 md:pb-0">
+                {filteredProducts.map(p => (
+                  <div key={p.id} className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-3">
+                    <div className="flex justify-between items-start gap-3">
+                      <div>
+                        <h4 className="font-bold text-slate-800 leading-tight text-sm line-clamp-2">{p.name}</h4>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">SKU: {p.sku}</p>
+                      </div>
+                      <div className="text-right">
+                        {p.isPromotionalPrice && p.promotionalPrice ? (
+                          <>
+                            <p className="text-[10px] font-bold text-slate-400 line-through">R$ {p.price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                            <p className="text-base font-black text-emerald-600 whitespace-nowrap">R$ {p.promotionalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                          </>
+                        ) : (
+                          <p className="text-base font-black text-slate-800 whitespace-nowrap">R$ {p.price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {p.variations.map((v: any) => {
+                        const isSelected = cart.some(item => item.variationId === v.id);
+                        return (
+                          <button
+                            key={v.id}
+                            onClick={() => addToCart(p, v)}
+                            disabled={v.quantity <= 0}
+                            className={`px-2.5 py-1.5 rounded-xl text-[10px] font-bold border transition-all flex flex-col items-center gap-0.5 min-w-[50px] ${isSelected
+                                ? 'border-[#0158ad] bg-[#0158ad] text-white shadow-md'
+                                : v.quantity > 0
+                                  ? 'border-slate-100 bg-slate-50 text-slate-700 hover:border-[#0158ad] hover:bg-blue-50 hover:text-[#0158ad]'
+                                  : 'border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed'
+                              }`}
+                          >
+                            <span>{v.size} {v.color && `• ${v.color}`}</span>
+                            <span className={`text-[8px] ${isSelected ? 'opacity-90' : 'opacity-70'}`}>Q: {v.quantity}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            // Checkout Section (omitted specific lines for brevity, assume unchanged logic)
+            <div className="bg-white rounded-[32px] border border-slate-200 shadow-sm overflow-hidden flex flex-col p-6 md:p-8 space-y-6 md:space-y-8 animate-in fade-in slide-in-from-right-4 duration-300 h-full md:h-auto overflow-y-auto md:overflow-visible pb-32 md:pb-8">
+              <div className="flex items-center gap-4 sticky top-0 bg-white z-10 py-2">
+                <button onClick={() => setShowPOSCheckout(false)} className="p-2 bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition-colors">
+                  <ArrowLeft size={20} />
+                </button>
+                <h3 className="text-xl md:text-2xl font-black text-slate-800">Finalização da Condicional</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 items-start">
+                {/* Row 1: Identificar Cliente & Descontos */}
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 h-4">
+                    <User size={14} /> Identificar Cliente
+                  </label>
+                  <div className="relative group">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                      <Search size={16} />
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Buscar por nome ou CPF..."
+                      className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+                      value={clientSearch}
+                      onChange={(e) => setClientSearch(e.target.value)}
+                    />
+                    {clientSearch && !checkoutData.clientId && (
+                      <div className="absolute z-50 left-0 right-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                        <div className="max-h-[250px] overflow-y-auto custom-scrollbar">
+                          {clients.filter(c => c.name.toLowerCase().includes(clientSearch.toLowerCase())).map(c => (
+                            <button
+                              key={c.id}
+                              onClick={() => {
+                                setCheckoutData({ ...checkoutData, clientId: c.id });
+                                setClientSearch(c.name);
+                              }}
+                              className="w-full p-4 text-left hover:bg-slate-50 flex items-center justify-between border-b border-slate-50 transition-colors"
+                            >
+                              <div>
+                                <p className="text-sm font-black text-slate-700">{c.name}</p>
+                                {c.cpf && <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">CPF: {c.cpf}</p>}
+                              </div>
+                              <Plus size={16} className="text-[#0158ad]" />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {checkoutData.clientId && (
+                    <p className="text-[10px] text-emerald-500 font-black uppercase mt-1 px-1 flex items-center gap-1">
+                      <CheckCircle size={10} /> Selecionado: {clients.find(c => c.id === checkoutData.clientId)?.name}
+                    </p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center h-4">Tipo Desconto</label>
+                    <select
+                      className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#0158ad]/20"
+                      value={checkoutData.discountType}
+                      onChange={(e) => setCheckoutData({ ...checkoutData, discountType: e.target.value as 'FIXED' | 'PERCENTAGE' })}
+                    >
+                      <option value="FIXED">Valor Fixo</option>
+                      <option value="PERCENTAGE">Porcentagem</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center h-4">Valor Desconto</label>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#0158ad]/20"
+                      placeholder="0,00"
+                      value={checkoutData.discount === 0 ? '' : checkoutData.discount}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(',', '.');
+                        setCheckoutData({ ...checkoutData, discount: val === '' ? 0 : Number(val) });
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Row 2: Duração & Tipo de Entrega */}
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 h-4">
+                    <Clock size={14} /> Duração da Condicional
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {[24, 48, 72, 168].map(hrs => (
+                      <button
+                        key={hrs}
+                        onClick={() => {
+                          const date = new Date();
+                          date.setHours(date.getHours() + hrs);
+                          const tzOffset = date.getTimezoneOffset() * 60000;
+                          const localISOTime = (new Date(date.getTime() - tzOffset)).toISOString().slice(0, 16);
+                          setCheckoutData({ ...checkoutData, returnDate: localISOTime });
+                          setSelectedDuration(hrs);
+                        }}
+                        className={`px-3 py-2 border rounded-xl text-[10px] font-bold transition-all ${selectedDuration === hrs
+                          ? 'bg-[#0158ad] text-white border-[#0158ad] shadow-lg shadow-blue-500/20'
+                          : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
+                          }`}
+                      >
+                        {hrs < 168 ? `${hrs}h` : '7 Dias'}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => {
+                        const hrs = Number(prompt('Digite a quantidade de horas:', '24'));
+                        if (hrs) {
+                          const date = new Date();
+                          date.setHours(date.getHours() + hrs);
+                          const tzOffset = date.getTimezoneOffset() * 60000;
+                          const localISOTime = (new Date(date.getTime() - tzOffset)).toISOString().slice(0, 16);
+                          setCheckoutData({ ...checkoutData, returnDate: localISOTime });
+                          setSelectedDuration(hrs);
+                        }
+                      }}
+                      className={`px-3 py-2 border rounded-xl text-[10px] font-bold transition-all ${selectedDuration !== null && ![24, 48, 72, 168].includes(selectedDuration)
+                        ? 'bg-[#0158ad] text-white border-[#0158ad] shadow-lg shadow-blue-500/20'
+                        : 'bg-slate-50 border-slate-200 border-dashed text-slate-400 hover:text-[#0158ad] hover:border-[#0158ad]'
+                        }`}
+                    >
+                      Outro
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 h-4">
+                    <Package size={14} className="text-slate-400" /> Tipo de Entrega
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setCheckoutData({ ...checkoutData, deliveryMethod: 'PICKUP', deliveryFee: 0 })}
+                      className={`px-3 py-2 border rounded-xl text-[10px] font-bold transition-all ${checkoutData.deliveryMethod === 'PICKUP'
+                        ? 'bg-[#0158ad] text-white border-[#0158ad] shadow-lg shadow-blue-500/20'
+                        : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
+                        }`}
+                    >
+                      RETIRADA
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCheckoutData({ ...checkoutData, deliveryMethod: 'DELIVERY' })}
+                      className={`px-3 py-2 border rounded-xl text-[10px] font-bold transition-all ${checkoutData.deliveryMethod === 'DELIVERY'
+                        ? 'bg-[#0158ad] text-white border-[#0158ad] shadow-lg shadow-blue-500/20'
+                        : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
+                        }`}
+                    >
+                      ENTREGA
+                    </button>
+                  </div>
+                </div>
+
+                {/* Row 3: Data de Retorno & Frete */}
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 h-4">
+                    <Calendar size={14} /> Data Limite
+                  </label>
+                  <input type="datetime-local"
+                    className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#0158ad]/20"
+                    value={checkoutData.returnDate}
+                    onChange={(e) => {
+                      setCheckoutData({ ...checkoutData, returnDate: e.target.value });
+                      setSelectedDuration(null);
+                    }}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center h-4">Frete (R$)</label>
+                  <input
+                    type="number"
+                    className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#0158ad]/20"
+                    placeholder="0,00"
+                    value={checkoutData.deliveryFee || ''}
+                    onChange={(e) => setCheckoutData({ ...checkoutData, deliveryFee: Number(e.target.value) })}
+                  />
+                </div>
+
+                {/* Row 4: Notas & Observações */}
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center h-4">Notas</label>
+                  <textarea
+                    rows={2}
+                    className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#0158ad]/20"
+                    placeholder="..."
+                    value={checkoutData.orderNotes}
+                    onChange={(e) => setCheckoutData({ ...checkoutData, orderNotes: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center h-4">Obs. Interna</label>
+                  <textarea
+                    rows={2}
+                    className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#0158ad]/20"
+                    placeholder="..."
+                    value={checkoutData.observation}
+                    onChange={(e) => setCheckoutData({ ...checkoutData, observation: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+        {/* Ajuste no tamanho do layout do carrinho */}
+        <div className="lg:col-span-12 xl:col-span-4 flex flex-col h-auto md:sticky md:top-6 md:h-[calc(100vh-140px)]">
+          <div className={`bg-slate-900 md:rounded-[32px] p-6 md:p-8 flex flex-col flex-1 shadow-2xl text-white overflow-hidden ${cart.length === 0 ? 'rounded-[32px]' : 'rounded-t-[32px] md:rounded-l-[32px]'}`}>
+            <div className="flex items-center gap-3 mb-6 md:mb-8 shrink-0">
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-white/10 rounded-2xl flex items-center justify-center shrink-0">
+                <ShoppingCart size={20} className="text-emerald-400" />
+              </div>
+              <h3 className="text-lg md:text-xl font-bold">Carrinho</h3>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto space-y-3 md:space-y-4 pr-2 custom-scrollbar-white max-h-[30vh] md:max-h-none">
+              {cart.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center gap-4 opacity-30 italic py-10">
+                  <Package size={48} />
+                  <p className="font-bold uppercase tracking-widest text-[10px]">Vazio</p>
+                </div>
+              ) : (
+                cart.map(item => (
+                  <div key={item.variationId} className="flex items-center gap-3 bg-white/5 p-3 rounded-2xl group transition-all hover:bg-white/10">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs md:text-sm font-bold truncate uppercase tracking-tight">{item.productName}</p>
+                      <p className="text-[9px] md:text-[10px] text-slate-400 font-bold uppercase tracking-tight">
+                        {item.color} • {item.size} <span className="text-emerald-400 ml-1 font-black">R$ {item.price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center bg-black/40 rounded-lg p-1">
+                        <button onClick={() => updateCartQuantity(item.variationId, -1)} className="w-5 h-5 flex items-center justify-center hover:bg-white/10 rounded font-bold">-</button>
+                        <span className="w-6 text-center text-[10px] font-black">{item.quantity}</span>
+                        <button onClick={() => updateCartQuantity(item.variationId, 1)} className="w-5 h-5 flex items-center justify-center hover:bg-white/10 rounded font-bold">+</button>
+                      </div>
+                      <button onClick={() => removeFromCart(item.variationId)} className="p-1.5 text-white/50 hover:text-red-400 transition-colors">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className={`mt-6 pt-6 border-t border-white/10 space-y-4`}>
+              {showPOSCheckout && (
+                <div className="space-y-2 mb-2">
+                  <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                    <span>Subtotal</span>
+                    <span>R$ {subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                  {checkoutData.discount > 0 && (
+                    <div className="flex justify-between items-center text-[10px] font-bold text-red-400 uppercase tracking-widest">
+                      <span>Desconto ({checkoutData.discountType === 'PERCENTAGE' ? `${checkoutData.discount}%` : 'Fixo'})</span>
+                      <span>- R$ {checkoutData.discountType === 'PERCENTAGE' ? (subtotal * (checkoutData.discount / 100)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : Number(checkoutData.discount).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
+                  {checkoutData.deliveryFee > 0 && (
+                    <div className="flex justify-between items-center text-[10px] font-bold text-blue-400 uppercase tracking-widest">
+                      <span>Frete</span>
+                      <span>+ R$ {Number(checkoutData.deliveryFee).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
+                  <div className="border-t border-white/10 !mt-3 !pt-2"></div>
+                </div>
+              )}
+              <div className="flex justify-between items-center text-white pt-2">
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Valor Total</span>
+                <span className="text-3xl font-black text-emerald-400 tracking-tight">R$ {cartTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex gap-3 pt-2">
+                {!showPOSCheckout ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        setCart([]);
+                        setShowPOS(false);
+                      }}
+                      className="flex-1 md:hidden py-4 bg-rose-50 text-rose-600 rounded-2xl font-black text-[10px] uppercase tracking-widest border border-rose-100 hover:bg-rose-100 transition-all"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      disabled={cart.length === 0}
+                      onClick={() => setShowPOSCheckout(true)}
+                      className="flex-[2] md:w-full py-4 md:py-5 bg-[#0158ad] text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-500/30 hover:bg-blue-800 hover:-translate-y-1 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                    >
+                      Continuar <ArrowLeft className="rotate-180" size={18} />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => setShowPOSCheckout(false)}
+                      className="flex-1 md:hidden py-4 bg-white border border-slate-200 text-slate-500 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-50 transition-all"
+                    >
+                      Voltar
+                    </button>
+                    <button
+                      disabled={cart.length === 0 || isSubmitting}
+                      onClick={handleCreateConditional}
+                      className="flex-[2] md:w-full py-4 md:py-5 bg-[#0158ad] text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-500/30 hover:bg-blue-800 hover:-translate-y-1 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:hover:translate-y-0"
+                    >
+                      {isSubmitting ? <><Loader2 className="animate-spin" size={18} /> ...</> : <>Gerar <CheckCircle size={18} /></>}
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+
+  if (showViewModal && selectedCond) {
+    return (
+      <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="flex items-center gap-4 mb-4">
+          <button onClick={() => setShowViewModal(false)} className="p-2 bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-slate-800 transition-colors shadow-sm">
+            <ArrowLeft size={20} />
+          </button>
+          <div className="flex items-center gap-4">
+            <div className={`w-12 h-12 ${isEditMode ? 'bg-amber-500' : 'bg-[#0158ad]'} rounded-xl flex items-center justify-center text-white shadow-lg transition-all`}>
+              {isEditMode ? <Pencil size={24} /> : <ClipboardCheck size={24} />}
+            </div>
+            <div>
+              <h3 className="text-2xl font-black text-slate-800 leading-tight uppercase tracking-tight">
+                {isEditMode ? 'Editar Condicional' : `Condicional #${selectedCond.id.split('-')[0].toUpperCase()}`}
+              </h3>
+              <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Lançado em {new Date(selectedCond.createdAt).toLocaleString('pt-BR')}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white w-full rounded-[40px] border border-slate-200 shadow-xl overflow-hidden flex flex-col mb-10">
+          <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                  <User size={14} className="text-[#0158ad]" /> Cliente Responsável
+                </label>
+                {isEditMode ? (
+                  <select
+                    className="w-full bg-white border border-slate-200 p-3 rounded-2xl text-sm font-bold focus:outline-none focus:ring-4 focus:ring-blue-500/5 transition-all"
+                    value={editForm.clientId}
+                    onChange={(e) => setEditForm({ ...editForm, clientId: e.target.value })}
+                  >
+                    {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                ) : (
+                  <p className="text-sm font-black text-slate-800 uppercase tracking-tight">{selectedCond.client?.name || 'Cliente Avulso'}</p>
+                )}
+              </div>
+              <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                  <Calendar size={14} className="text-[#0158ad]" /> Prazo de Retorno
+                </label>
+                {isEditMode ? (
+                  <input
+                    type="datetime-local"
+                    className="w-full bg-white border border-slate-200 p-3 rounded-2xl text-sm font-bold focus:outline-none focus:ring-4 focus:ring-blue-500/5 transition-all"
+                    value={editForm.returnDate}
+                    onChange={(e) => setEditForm({ ...editForm, returnDate: e.target.value })}
+                  />
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2.5 h-2.5 rounded-full ${selectedCond.status === 'OVERDUE' ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}`}></span>
+                    <p className={`text-sm font-black uppercase ${selectedCond.status === 'OVERDUE' ? 'text-red-500' : 'text-slate-800'}`}>
+                      {new Date(selectedCond.returnDate).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+                    </p>
+                  </div>
+                )}
+              </div>
+              <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                  <CreditCard size={14} className="text-[#0158ad]" /> Situação Atual
+                </label>
+                <p className="text-sm font-black text-slate-800 uppercase tracking-tight">
+                  {selectedCond.status === 'PENDING' ? 'Em Aberto (Com Cliente)' :
+                    selectedCond.status === 'OVERDUE' ? 'Atrasado / Cobrar' :
+                      selectedCond.status === 'FINISHED' ? 'Finalizado (Venda/Devolvido)' : 'Devolução Total'}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between px-2">
+                <h4 className="text-[11px] font-black text-slate-800 uppercase tracking-widest">Itens Reservados</h4>
+                {isSettling && <span className="text-[11px] font-black text-emerald-500 uppercase tracking-widest">Ajuste as quantidades vendidas abaixo</span>}
+              </div>
+              <div className="border border-slate-100 rounded-[32px] overflow-hidden shadow-sm">
+                <table className="w-full text-left">
+                  <thead className="bg-slate-50">
+                    <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      <th className="px-8 py-5">Produto</th>
+                      <th className="px-8 py-5 text-center">Referência</th>
+                      <th className="px-8 py-5 text-center">Quantidade</th>
+                      {isSettling && <th className="px-8 py-5 text-center text-emerald-500">Vendidas</th>}
+                      <th className="px-8 py-5 text-right">Preço</th>
+                      <th className="px-8 py-5 text-right">Subtotal</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50 text-sm">
+                    {selectedCond.items.map((item: any, idx: number) => (
+                      <tr key={idx} className="font-bold text-slate-700 hover:bg-slate-50/50 transition-colors">
+                        <td className="px-8 py-5 uppercase tracking-tight">{item.variation.product.name}</td>
+                        <td className="px-8 py-5 text-center">
+                          <span className="bg-slate-100 px-2.5 py-1.5 rounded-xl text-[10px] font-black text-slate-600 uppercase">
+                            {item.variation.size} • {item.variation.color || 'Padrão'}
+                          </span>
+                        </td>
+                        <td className="px-8 py-5 text-center">{item.quantity}</td>
+                        {isSettling && (
+                          <td className="px-8 py-5 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <input
+                                type="number"
+                                className="w-16 p-2 bg-emerald-50 border border-emerald-100 rounded-xl text-center text-sm font-black text-emerald-700"
+                                value={settlementQuantities[item.variationId] || 0}
+                                onChange={(e) => setSettlementQuantities({ ...settlementQuantities, [item.variationId]: Math.min(item.quantity, Math.max(0, Number(e.target.value))) })}
+                              />
+                            </div>
+                          </td>
+                        )}
+                        <td className="px-8 py-5 text-right text-slate-400 font-medium">R$ {item.unitPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td className="px-8 py-5 text-right text-slate-900 font-black">R$ {(item.unitPrice * (isSettling ? settlementQuantities[item.variationId] || 0 : item.quantity)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {isEditMode ? (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Notas do Pedido (Recibo)</label>
+                    <textarea
+                      rows={4}
+                      className="w-full bg-slate-50 border border-slate-100 p-6 rounded-3xl text-sm font-medium focus:outline-none focus:ring-4 focus:ring-amber-500/5 transition-all"
+                      placeholder="Essa nota aparecerá no recibo do pedido"
+                      value={editForm.orderNotes}
+                      onChange={(e) => setEditForm({ ...editForm, orderNotes: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-4">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Editar Observação Interna</label>
+                    <textarea
+                      rows={4}
+                      className="w-full bg-slate-50 border border-slate-100 p-6 rounded-3xl text-sm font-medium focus:outline-none focus:ring-4 focus:ring-amber-500/5 transition-all"
+                      value={editForm.observation}
+                      onChange={(e) => setEditForm({ ...editForm, observation: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6 mt-6">
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                      <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Tipo Desconto</label>
+                      <select
+                        className="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold focus:outline-none"
+                        value={editForm.discountType}
+                        onChange={(e) => setEditForm({ ...editForm, discountType: e.target.value as 'FIXED' | 'PERCENTAGE' })}
+                      >
+                        <option value="FIXED">Valor Fixo (R$)</option>
+                        <option value="PERCENTAGE">Porcentagem (%)</option>
+                      </select>
+                    </div>
+                    <div className="space-y-3">
+                      <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Valor Desconto</label>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        className="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold focus:outline-none"
+                        placeholder="0,00"
+                        value={editForm.discount === 0 ? '' : editForm.discount}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(',', '.');
+                          setEditForm({ ...editForm, discount: val === '' ? 0 : Number(val) });
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                      <Package size={14} className="text-slate-400" /> Tipo de Entrega
+                    </label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <button
+                        type="button"
+                        onClick={() => setEditForm({ ...editForm, deliveryMethod: 'PICKUP', deliveryFee: 0 })}
+                        className={`px-4 py-2 border rounded-xl text-xs font-bold transition-all ${editForm.deliveryMethod === 'PICKUP'
+                          ? 'bg-[#0158ad] text-white border-[#0158ad] shadow-lg shadow-blue-500/20'
+                          : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
+                          }`}
+                      >
+                        Retirada na Loja
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditForm({ ...editForm, deliveryMethod: 'DELIVERY' })}
+                        className={`px-4 py-2 border rounded-xl text-xs font-bold transition-all ${editForm.deliveryMethod === 'DELIVERY'
+                          ? 'bg-[#0158ad] text-white border-[#0158ad] shadow-lg shadow-blue-500/20'
+                          : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
+                          }`}
+                      >
+                        Entrega / Motoboy
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Valor do Frete (Se houver)</label>
+                    <input
+                      type="number"
+                      className="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold focus:outline-none"
+                      value={editForm.deliveryFee}
+                      onChange={(e) => setEditForm({ ...editForm, deliveryFee: Number(e.target.value) })}
+                    />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {selectedCond.orderNotes && (
+                    <div className="bg-emerald-50/30 p-8 rounded-[32px] border border-emerald-100/50 space-y-3">
+                      <label className="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-2">
+                        <Banknote size={14} /> Notas do Pedido (Recibo)
+                      </label>
+                      <p className="text-sm font-medium text-slate-600 italic leading-relaxed">"{selectedCond.orderNotes}"</p>
+                    </div>
+                  )}
+                  {selectedCond.observation && (
+                    <div className="bg-blue-50/30 p-8 rounded-[32px] border border-blue-100/50 space-y-3">
+                      <label className="text-[10px] font-black text-[#0158ad] uppercase tracking-widest flex items-center gap-2">
+                        <AlertCircle size={14} /> Nota Interna
+                      </label>
+                      <p className="text-sm font-medium text-slate-600 italic leading-relaxed">"{selectedCond.observation}"</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="bg-slate-50 p-5 rounded-3xl border border-slate-100">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Desconto Aplicado</p>
+                    <p className="text-sm font-black text-slate-800 uppercase tracking-tight">
+                      {selectedCond.discount > 0 ? `${selectedCond.discountType === 'PERCENTAGE' ? `${selectedCond.discount}%` : `R$ ${selectedCond.discount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}` : 'Nenhum'}
+                    </p>
+                  </div>
+                  <div className="bg-slate-50 p-5 rounded-3xl border border-slate-100">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Frete / Entrega</p>
+                    <p className="text-sm font-black text-slate-800 uppercase tracking-tight">
+                      {selectedCond.deliveryFee > 0 ? `R$ ${selectedCond.deliveryFee.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'Grátis / S. Kob'}
+                    </p>
+                  </div>
+                  <div className="bg-slate-50 p-5 rounded-3xl border border-slate-100">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Método de Entrega</p>
+                    <p className="text-sm font-black text-slate-800 uppercase tracking-tight">
+                      {selectedCond.deliveryMethod === 'PICKUP' ? 'Retirada na Loja' : 'Entrega / Motoboy'}
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
+
+            <div className="bg-slate-900 rounded-[40px] p-8 text-white space-y-5 shadow-2xl relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 blur-[100px] pointer-events-none group-hover:bg-emerald-500/20 transition-all"></div>
+              <div className="flex justify-between items-center text-slate-400 text-xs font-black uppercase tracking-[0.2em] relative z-10">
+                <span>Subtotal dos Itens</span>
+                <span className="font-bold">R$ {(isSettling ? Object.entries(settlementQuantities).reduce((acc: number, [vid, qty]) => acc + (Number(selectedCond?.items.find((i: any) => i.variationId === vid)?.unitPrice || 0) * Number(qty)), 0) : Number(selectedCond?.subtotal || selectedCond?.items.reduce((acc: number, i: any) => acc + (i.unitPrice * i.quantity), 0) || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </div>
+
+              <div className="flex justify-between items-center text-slate-400 text-xs font-black uppercase tracking-[0.2em] relative z-10">
+                <span>Descontos e Frete</span>
+                <span className="font-bold flex items-center gap-2">
+                  {isEditMode ? (
+                    <>
+                      <span className="text-red-400">DESC: - {editForm.discountType === 'FIXED' ? `R$ ${editForm.discount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `${editForm.discount}%`}</span>
+                      <span className="opacity-30">|</span>
+                      <span>FRETE: R$ {editForm.deliveryFee.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-red-400">DESC: - {selectedCond.discountType === 'FIXED' ? `R$ ${selectedCond.discount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `${selectedCond.discount}%`}</span>
+                      <span className="opacity-30">|</span>
+                      <span>FRETE: R$ {selectedCond.deliveryFee.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </>
+                  )}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center relative z-10 border-t border-white/10 pt-4">
+                <span className="text-xl font-bold uppercase tracking-tight">Total {isSettling ? 'Venda Parcial' : 'Condicional'}</span>
+                <span className="text-4xl font-black text-emerald-400 tracking-tighter shadow-emerald-400/20">
+                  R$ {(() => {
+                    const baseSubtotal = isSettling
+                      ? Object.entries(settlementQuantities).reduce((acc: number, [vid, qty]) => acc + (Number(selectedCond?.items.find((i: any) => i.variationId === vid)?.unitPrice || 0) * Number(qty)), 0)
+                      : (selectedCond?.subtotal || selectedCond?.items.reduce((acc: number, i: any) => acc + (i.unitPrice * i.quantity), 0) || 0);
+
+                    const disc = isEditMode ? editForm.discount : selectedCond.discount;
+                    const dType = isEditMode ? editForm.discountType : selectedCond.discountType;
+                    const fee = isEditMode ? editForm.deliveryFee : selectedCond.deliveryFee;
+
+                    const afterDisc = dType === 'PERCENTAGE'
+                      ? baseSubtotal - (baseSubtotal * (disc / 100))
+                      : baseSubtotal - disc;
+
+                    return (afterDisc + Number(fee)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                  })()}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-8 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-4">
+            {(selectedCond.status === 'PENDING' || selectedCond.status === 'OVERDUE') ? (
+              <>
+                {isEditMode ? (
+                  <div className="flex flex-1 justify-end gap-3">
+                    <button onClick={() => setIsEditMode(false)} className="px-8 py-4 text-slate-500 font-bold uppercase text-[10px] tracking-widest hover:bg-slate-200 rounded-2xl transition-all">Cancelar</button>
+                    <button onClick={handleUpdate} className="px-12 py-4 bg-amber-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-amber-500/20 hover:bg-amber-600 transition-all flex items-center gap-2">
+                      {isSubmitting ? <Loader2 className="animate-spin" size={14} /> : <CheckCircle size={14} />} Salvar Alterações
+                    </button>
+                  </div>
+                ) : isSettling ? (
+                  <div className="flex flex-1 items-center justify-between">
+                    <button onClick={() => setIsSettling(false)} className="px-6 py-4 text-slate-400 font-black uppercase text-[10px] tracking-widest hover:text-slate-600 transition-all flex items-center gap-2">
+                      <ArrowLeft size={14} /> Voltar para Opções
+                    </button>
+                    <button
+                      onClick={() => {
+                        const partialItems = selectedCond.items.map((i: any) => ({
+                          variationId: i.variationId,
+                          quantity: settlementQuantities[i.variationId] || 0,
+                          unitPrice: i.unitPrice
+                        })).filter((i: any) => i.quantity > 0);
+                        handleFinalize(selectedCond.id, partialItems);
+                      }}
+                      className="px-12 py-4 bg-emerald-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-emerald-500/30 hover:bg-emerald-600 hover:-translate-y-1 transition-all flex items-center gap-3"
+                    >
+                      Confirmar Venda Parcial <ShoppingCart size={16} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-1 items-center justify-between">
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => handleFinalize(selectedCond.id)}
+                        className="px-8 py-4 bg-emerald-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg flex items-center gap-2 active:scale-95"
+                      >
+                        Finalizar Total (Compra Tudo)
+                      </button>
+                      <button
+                        onClick={() => setIsSettling(true)}
+                        className="px-8 py-4 bg-[#0158ad] text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg flex items-center gap-2 active:scale-95"
+                      >
+                        Finalização Parcial (Escolher Peças)
+                      </button>
+                      <button
+                        onClick={() => handleReturn(selectedCond.id)}
+                        className="px-8 py-4 bg-slate-100 text-slate-500 rounded-2xl border border-slate-200 font-black text-[10px] uppercase tracking-widest hover:bg-white hover:text-orange-500 hover:border-orange-200 transition-all active:scale-95"
+                      >
+                        Devolver Tudo
+                      </button>
+                    </div>
+                    <button onClick={() => handleDelete(selectedCond.id)} className="p-4 text-red-300 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all" title="Excluir Definitivamente">
+                      <Trash2 size={24} />
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="flex-1 flex flex-col items-center py-4 bg-slate-50 border border-dashed border-slate-200 rounded-[32px]">
+                <CheckCircle size={32} className="text-emerald-500 mb-2 opacity-50" />
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Condicional Finalizada</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Payment Selection Modal (Inside View Modal Scope) */}
+        {showPaymentModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="bg-white w-full max-w-sm rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 p-8 space-y-6">
+              <div className="flex flex-col items-center text-center space-y-3">
+                <div className="w-16 h-16 bg-blue-50 text-[#0158ad] rounded-full flex items-center justify-center mb-2">
+                  <CreditCard size={32} />
+                </div>
+                <h3 className="text-xl font-black text-slate-800 tracking-tight">Forma de Pagamento</h3>
+                <p className="text-sm text-slate-500 font-medium">
+                  Selecione a forma de pagamento para finalizar a venda desta condicional.
+                </p>
+              </div>
+              <div className="space-y-3">
+                {[
+                  { label: 'Dinheiro', value: 'CASH', icon: Banknote },
+                  { label: 'Cartão de Crédito', value: 'CREDIT_CARD', icon: CreditCard },
+                  { label: 'Cartão de Débito', value: 'DEBIT_CARD', icon: CreditCard },
+                  { label: 'PIX', value: 'PIX', icon: QrCode },
+                  { label: 'Pendente (A Combinar / Fiado)', value: 'A_COMBINAR', icon: Clock }
+                ].map((method) => (
+                  <button
+                    key={method.value}
+                    onClick={() => confirmFinalize(method.value)}
+                    className={`w-full p-4 flex items-center justify-between font-black rounded-2xl transition-all border uppercase tracking-widest text-xs
+                        ${method.value === 'A_COMBINAR'
+                        ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200 shadow-sm'
+                        : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-100'}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <method.icon size={16} className={method.value === 'A_COMBINAR' ? 'text-amber-500' : 'text-slate-400'} />
+                      {method.label}
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => {
+                  setShowPaymentModal(false);
+                  setPendingFinalize(null);
+                }}
+                className="w-full p-4 text-slate-400 hover:text-slate-600 font-black tracking-widest text-xs uppercase transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-800">Condicionais</h2>
+          <p className="text-slate-500">Gestão de produtos destacados para clientes.</p>
+        </div>
+        <button
+          onClick={() => {
+            setShowPOS(true);
+            setShowPOSCheckout(false);
+          }}
+          className="flex items-center gap-2 px-5 py-2.5 bg-[#0158ad] text-white rounded-xl font-bold hover:bg-blue-800 shadow-lg shadow-blue-100 transition-all"
+        >
+          <Plus size={20} />
+          Nova Condicional
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {stats.map((stat, i) => (
+          <div key={i} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3 transition-all hover:border-[#0158ad]/30 group">
+            <div className={`p-3 rounded-xl ${stat.bg} ${stat.color} shadow-sm transition-transform group-hover:scale-110`}>
+              <stat.icon size={20} />
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{stat.label}</p>
+              <p className="text-lg font-black text-slate-800 tracking-tight">{stat.value}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl">
+            {['Todos', 'Ativos', 'Atrasados', 'Finalizados'].map(filter => (
+              <button
+                key={filter}
+                onClick={() => setActiveFilter(filter)}
+                className={`px-4 py-1.5 text-[10px] font-black uppercase tracking-tight rounded-lg transition-all ${activeFilter === filter
+                  ? 'bg-white text-[#0158ad] shadow-sm ring-1 ring-slate-100'
+                  : 'text-slate-400 hover:text-slate-600'
+                  }`}
+              >
+                {filter}
+              </button>
+            ))}
+          </div>
+          <div className="relative flex-1 md:max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <input
+              type="text"
+              placeholder="Buscar por cliente..."
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0158ad]/10 text-sm font-bold"
+            />
+          </div>
+        </div>
+
+        <div className="overflow-x-auto hidden md:block">
+          <table className="w-full text-left min-w-[900px]">
+            <thead>
+              <tr className="bg-slate-50/50 text-slate-400 text-[10px] font-black uppercase tracking-widest">
+                <th className="px-6 py-4">Cliente</th>
+                <th className="px-6 py-4">Emissão</th>
+                <th className="px-6 py-4">Prazo Devolução</th>
+                <th className="px-6 py-4 text-center">Itens</th>
+                <th className="px-6 py-4 text-right">Valor Total</th>
+                <th className="px-6 py-4 text-center">Status</th>
+                <th className="px-6 py-4 text-center">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {isLoading ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-20 text-center">
+                    <Loader2 className="animate-spin inline-block text-[#0158ad] mb-2" size={32} />
+                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest text-center">Sincronizando registros...</p>
+                  </td>
+                </tr>
+              ) : filteredConditionals.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-20 text-center text-slate-400 italic font-medium uppercase text-[10px] tracking-widest">Nenhuma condicional para exibir</td>
+                </tr>
+              ) : filteredConditionals.map((c) => (
+                <tr key={c.id} className="hover:bg-slate-50/50 transition-colors group">
+                  <td className="px-6 py-4">
+                    <div>
+                      <p className="text-sm font-bold text-slate-800 uppercase tracking-tight leading-none">{c.client?.name || 'Cliente Avulso'}</p>
+                      <p className="text-[9px] font-black text-slate-400 uppercase mt-1">ID: #{c.id.split('-')[0]}</p>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">{new Date(c.createdAt).toLocaleDateString('pt-BR')}</td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${c.status === 'OVERDUE' ? 'bg-red-500 animate-pulse' : 'bg-orange-400'}`}></span>
+                      <p className={`text-xs font-black uppercase ${c.status === 'OVERDUE' ? 'text-red-500' : 'text-slate-600'}`}>{new Date(c.returnDate).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</p>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <span className="bg-slate-50 px-3 py-1 rounded-xl border border-slate-100 text-[10px] font-black text-slate-500 uppercase">{c.items.length} Pçs</span>
+                  </td>
+                  <td className="px-6 py-4 text-right text-lg font-black text-slate-800 tracking-tight">R$ {c.total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  <td className="px-6 py-4 text-center">
+                    <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${c.status === 'OVERDUE' ? 'bg-red-50 text-red-600 border border-red-100' :
+                      c.status === 'PENDING' ? 'bg-orange-50 text-orange-600 border border-orange-100' :
+                        c.status === 'FINISHED' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-slate-50 text-slate-400 border border-slate-100'
+                      }`}>
+                      {c.status === 'PENDING' ? 'Aguardando' : c.status === 'OVERDUE' ? 'Atrasado' : c.status === 'FINISHED' ? 'Vendido' : 'Devolvido'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <button
+                        onClick={() => {
+                          setSelectedCond(c);
+                          setSettlementQuantities(c.items.reduce((acc: any, item: any) => ({ ...acc, [item.variationId]: item.quantity }), {}));
+                          setShowViewModal(true);
+                          setIsEditMode(false);
+                          setIsSettling(false);
+                        }}
+                        className="p-2 text-slate-400 hover:text-[#0158ad] hover:bg-blue-50 rounded-lg transition-all"
+                        title="Detalhes"
+                      >
+                        <Eye size={18} />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedCond(c);
+                          setEditForm({
+                            returnDate: c.returnDate ? c.returnDate.slice(0, 16) : '',
+                            observation: c.observation || '',
+                            orderNotes: c.orderNotes || '',
+                            clientId: c.clientId || '',
+                            discount: c.discount || 0,
+                            discountType: c.discountType || 'FIXED',
+                            deliveryFee: c.deliveryFee || 0,
+                            deliveryMethod: c.deliveryMethod || 'PICKUP'
+                          });
+                          setIsEditMode(true);
+                          setShowViewModal(true);
+                        }}
+                        className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
+                        title="Editar"
+                      >
+                        <Pencil size={18} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(c.id)}
+                        className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                        title="Excluir"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile List (Cards) */}
+        <div className="block md:hidden space-y-4 p-4">
+          {filteredConditionals.length === 0 && !isLoading && (
+            <div className="text-center py-10 text-slate-400 italic text-sm">
+              Nenhuma condicional encontrada.
+            </div>
+          )}
+          {filteredConditionals.map((c) => (
+            <div key={c.id} className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-1.5 rounded">#{c.id.split('-')[0]}</span>
+                    <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest ${c.status === 'OVERDUE' ? 'bg-red-50 text-red-600 border border-red-100' :
+                      c.status === 'PENDING' ? 'bg-orange-50 text-orange-600 border border-orange-100' :
+                        c.status === 'FINISHED' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-slate-50 text-slate-400 border-slate-100'
+                      }`}>
+                      {c.status === 'PENDING' ? 'Aguardando' : c.status === 'OVERDUE' ? 'Atrasado' : c.status === 'FINISHED' ? 'Vendido' : 'Devolvido'}
+                    </span>
+                  </div>
+                  <h4 className="font-bold text-slate-800 text-sm">{c.client?.name || 'Cliente Avulso'}</h4>
+                </div>
+                <p className="text-xl font-black text-slate-800">R$ {c.total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="bg-slate-50 p-2 rounded-xl border border-slate-100">
+                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Retorno</p>
+                  <div className="flex items-center gap-1 font-bold text-slate-700">
+                    <Calendar size={12} className={c.status === 'OVERDUE' ? 'text-red-500' : 'text-slate-400'} />
+                    <span className={c.status === 'OVERDUE' ? 'text-red-600' : ''}>
+                      {new Date(c.returnDate).toLocaleDateString('pt-BR')} <span className="text-[9px] opacity-70">{new Date(c.returnDate).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                    </span>
+                  </div>
+                </div>
+                <div className="bg-slate-50 p-2 rounded-xl border border-slate-100">
+                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Itens</p>
+                  <div className="flex items-center gap-1 font-bold text-slate-700">
+                    <Package size={12} className="text-slate-400" />
+                    <span>{c.items.length} Peças</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
+                <button onClick={() => {
+                  setSelectedCond(c);
+                  setSettlementQuantities(c.items.reduce((acc: any, item: any) => ({ ...acc, [item.variationId]: item.quantity }), {}));
+                  setShowViewModal(true);
+                  setIsEditMode(false);
+                  setIsSettling(false);
+                }}
+                  className="p-2 bg-slate-50 text-slate-400 hover:text-blue-600 rounded-lg border border-slate-100 transition-colors">
+                  <Eye size={18} />
+                </button>
+                <button onClick={() => {
+                  setSelectedCond(c);
+                  setEditForm({
+                    returnDate: c.returnDate ? c.returnDate.slice(0, 16) : '',
+                    observation: c.observation || '',
+                    orderNotes: c.orderNotes || '',
+                    clientId: c.clientId || '',
+                    discount: c.discount || 0,
+                    discountType: c.discountType || 'FIXED',
+                    deliveryFee: c.deliveryFee || 0,
+                    deliveryMethod: c.deliveryMethod || 'PICKUP'
+                  });
+                  setIsEditMode(true);
+                  setShowViewModal(true);
+                }}
+                  className="p-2 bg-slate-50 text-slate-400 hover:text-amber-600 rounded-lg border border-slate-100 transition-colors">
+                  <Pencil size={18} />
+                </button>
+                <button onClick={() => handleDelete(c.id)} className="p-2 bg-slate-50 text-slate-400 hover:text-red-600 rounded-lg border border-slate-100 transition-colors">
+                  <Trash2 size={18} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {conditionals.some(c => c.status === 'OVERDUE') && (
+        <div className="bg-slate-900 border-l-[6px] border-red-500 text-white p-8 rounded-3xl shadow-2xl flex items-center justify-between animate-in slide-in-from-left-4">
+          <div className="flex items-center gap-6">
+            <div className="bg-red-500 p-3 rounded-2xl shadow-lg shadow-red-500/30 animate-pulse"><Clock size={24} /></div>
+            <div>
+              <p className="text-lg font-black uppercase tracking-tight leading-none">Atenção: Retornos em Atraso</p>
+              <p className="text-white/50 text-[11px] font-bold uppercase tracking-widest mt-2">Você possui condicionais com o prazo vencido que precisam ser resolvidas.</p>
+            </div>
+          </div>
+          <button onClick={() => setActiveFilter('Atrasados')} className="px-8 py-3 bg-white text-slate-900 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-100 transition-all shadow-xl">Listar Atrasados</button>
+        </div>
+      )}
+
+
+    </div >
+  );
+};
+
+// Simple icon wrapper for compatibility
+const ShoppingBagIcon = ({ size, className }: any) => <ShoppingCart size={size} className={className} />;
+
+export default Conditionals;

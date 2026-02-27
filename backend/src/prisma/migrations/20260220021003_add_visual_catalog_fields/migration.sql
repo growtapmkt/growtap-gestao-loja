@@ -1,0 +1,17 @@
+-- AlterTable
+ALTER TABLE "StoreSettings" ADD COLUMN     "catalogBannerButtonText" TEXT,
+ADD COLUMN     "catalogBannerLink" TEXT,
+ADD COLUMN     "catalogBannerSubtitle" TEXT,
+ADD COLUMN     "catalogBannerTag" TEXT,
+ADD COLUMN     "catalogBannerTitle" TEXT,
+ADD COLUMN     "catalogHighlightsSubtitle" TEXT,
+ADD COLUMN     "catalogHighlightsTitle" TEXT,
+ADD COLUMN     "catalogLayoutMobile" TEXT NOT NULL DEFAULT 'list',
+ADD COLUMN     "catalogNewArrivalsSubtitle" TEXT,
+ADD COLUMN     "catalogNewArrivalsTitle" TEXT,
+ADD COLUMN     "catalogOptionalSubtitle" TEXT,
+ADD COLUMN     "catalogOptionalTitle" TEXT,
+ADD COLUMN     "catalogShowBannerButton" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN     "catalogShowHighlights" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN     "catalogShowNewArrivals" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN     "catalogShowOptional" BOOLEAN NOT NULL DEFAULT false;

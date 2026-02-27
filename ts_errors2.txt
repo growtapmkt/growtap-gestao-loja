@@ -1,0 +1,1 @@
+﻿backend/devtest.js(1,532): error TS1127: Invalid character.

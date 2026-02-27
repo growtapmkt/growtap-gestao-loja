@@ -1,0 +1,7 @@
+{
+  "name": "Boutique Manager ERP",
+  "description": "A complete boutique management system featuring inventory with variations, sales tracking, conditional orders (appro), cashier management, and a public online catalog.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

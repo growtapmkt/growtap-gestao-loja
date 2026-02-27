@@ -1,0 +1,664 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Store {
+  id        String   @id @default(cuid())
+  name      String
+  plan      PlanType @default(FREE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users           User[]
+  products        Product[]
+  categories      Category[]
+  brands          Brand[]
+  clients         Client[]
+  sales           Sale[]
+  transactions    Transaction[]
+  conditionals    Conditional[]
+  characteristics Characteristic[]
+  storeCounter    StoreCounter?
+  settings        StoreSettings?
+
+  productPrefix         String                  @default("PROD") // Prefixo padrão (configurável)
+  productPadding        Int                     @default(4) // Quantidade de zeros (ex: 0001)
+  ProductCharacteristic ProductCharacteristic[]
+  ProductVariation      ProductVariation[]
+  SaleItem              SaleItem[]
+  ConditionalItem       ConditionalItem[]
+  CatalogConfig         CatalogConfig[]
+  Banner                Banner[]
+  subscriptions         StoreSubscription[]
+  FeatureUsage          FeatureUsage[]
+}
+
+model User {
+  id       String @id @default(uuid())
+  email    String @unique
+  password String
+  name     String
+  role     Role   @default(EMPLOYEE)
+
+  storeId String?
+  store   Store?  @relation(fields: [storeId], references: [id])
+
+  sales        Sale[]
+  conditionals Conditional[]
+  transactions Transaction[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  deletedAt DateTime?
+
+  @@index([storeId])
+  @@index([storeId, id])
+}
+
+enum Role {
+  ADMIN
+  EMPLOYEE
+  OWNER
+}
+
+model Product {
+  id          String  @id @default(uuid())
+  displayId   Int // Sequencial por loja (gerado via código)
+  productCode String? // Código formatado (ex: PROD-0001)
+
+  storeId String?
+  store   Store?  @relation(fields: [storeId], references: [id])
+
+  name            String
+  description     String?
+  sku             String?
+  image           String? // Mantido para compatibilidade (Capa)
+  images          String[]                @default([]) // Galeria completa (Até 4 imagens)
+  barcode         String?
+  isCombo         Boolean                 @default(false)
+  isFractional    Boolean                 @default(false)
+  controlStock    Boolean                 @default(true)
+  availableQty    Int                     @default(0)
+  minStockQty     Int                     @default(0)
+  catalogMinStock Int                     @default(0)
+  receiptMessage  String?
+  supplier        String?
+  categoryId      String?
+  category        Category?               @relation(fields: [categoryId], references: [id])
+  brandId         String?
+  brand           Brand?                  @relation(fields: [brandId], references: [id])
+  cost            Float?
+  profitPercent   Float?
+  profitAmount    Float?
+  price                         Float
+  isPromotionalPrice            Boolean                 @default(false)
+  promotionalDiscountPercentage Float?
+  promotionalPrice              Float?
+  showInCatalog                 Boolean                 @default(true)
+  active          Boolean                 @default(true)
+  variations      ProductVariation[]
+  characteristics ProductCharacteristic[]
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  deletedAt       DateTime?
+
+  @@unique([storeId, displayId])
+  @@unique([storeId, productCode]) // Código único por loja
+  @@index([storeId])
+  @@index([storeId, id])
+}
+
+model Brand {
+  id String @id @default(uuid())
+
+  storeId String?
+  store   Store?  @relation(fields: [storeId], references: [id])
+
+  name             String    @unique
+  cnpj             String?   @unique
+  email            String?
+  phone            String?
+  contactPerson    String?
+  cep              String?
+  address          String?
+  number           String?
+  complement       String?
+  neighborhood     String?
+  city             String?
+  state            String?
+  website          String?
+  notes            String?
+  whatsapp         String?
+  instagram        String?
+  registrationType String    @default("COMPLETE") // "COMPLETE" or "QUICK"
+  active           Boolean   @default(true)
+  products         Product[]
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([storeId])
+  @@index([storeId, id])
+}
+
+model Characteristic {
+  id String @id @default(uuid())
+
+  storeId String?
+  store   Store?  @relation(fields: [storeId], references: [id])
+
+  name      String                  @unique
+  options   String? // Opções separadas por vírgula (ex: "P,M,G,GG" ou "Algodão,Poliéster,Viscose")
+  status    CharacteristicStatus    @default(ATIVA)
+  order     Int                     @default(0)
+  products  ProductCharacteristic[]
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
+
+  @@index([storeId])
+  @@index([storeId, id])
+}
+
+model ProductCharacteristic {
+  id               String         @id @default(uuid())
+  productId        String
+  characteristicId String
+  value            String // Ex: "100% Algodão"
+  product          Product        @relation(fields: [productId], references: [id])
+  characteristic   Characteristic @relation(fields: [characteristicId], references: [id])
+  storeId          String
+  store            Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId])
+  @@index([storeId, id])
+}
+
+enum CharacteristicStatus {
+  ATIVA
+  INATIVA
+}
+
+model ProductVariation {
+  id               String            @id @default(uuid())
+  productId        String
+  variationCode    Int? // Sequencial único por variação (ERP) - Opcional para suportar dados legados sem migração complexa imediata
+  product          Product           @relation(fields: [productId], references: [id])
+  color            String?
+  size             String?
+  quantity         Int               @default(0)
+  images           String[]          @default([]) // Imagens da variação
+  active           Boolean           @default(true) // Soft Delete e.g. "Descontinuado"
+  lastSaleDate     DateTime?
+  lastEntryDate    DateTime          @default(now())
+  saleItems        SaleItem[]
+  conditionalItems ConditionalItem[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  storeId   String
+  store     Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  version   Int       @default(1)
+  deletedAt DateTime?
+
+  @@unique([productId, variationCode]) // Garante unicidade do código dentro do produto (se preenchido)
+  @@index([storeId])
+  @@index([storeId, id])
+}
+
+model Category {
+  id String @id @default(uuid())
+
+  storeId String?
+  store   Store?  @relation(fields: [storeId], references: [id])
+
+  name           String              @unique
+  description    String?
+  type           CategoryType        @default(ROUPA)
+  status         CategoryStatus      @default(ATIVA)
+  order          Int                 @default(0)
+  public         CategoryPublic      @default(UNISSEX)
+  seasonality    CategorySeasonality @default(ATEMPORAL)
+  expectedMargin Float? // Margem estratégica (ex: 2.5)
+  parentId       String?
+  parent         Category?           @relation("SubCategories", fields: [parentId], references: [id])
+  subCategories  Category[]          @relation("SubCategories")
+  products       Product[]
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@index([storeId])
+  @@index([storeId, id])
+}
+
+model Client {
+  id String @id @default(uuid())
+
+  storeId String?
+  store   Store?  @relation(fields: [storeId], references: [id])
+
+  name           String
+  email          String?       @unique
+  phone          String?
+  cpf            String?       @unique
+  address        String?
+  complement     String?
+  number         String?
+  neighborhood   String?
+  city           String?
+  state          String?
+  cep            String?
+  birthday       DateTime?
+  topSize        String?
+  bottomSize     String?
+  shoesSize      String?
+  favoriteColors String[]      @default([])
+  personalNotes  String?
+  history        Json?
+  sales          Sale[]
+  conditionals   Conditional[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  version   Int       @default(1)
+  deletedAt DateTime?
+
+  @@index([storeId])
+  @@index([storeId, id])
+}
+
+model Sale {
+  id String @id @default(uuid())
+
+  storeId String?
+  store   Store?  @relation(fields: [storeId], references: [id])
+
+  subtotal       Float        @default(0)
+  discount       Float        @default(0)
+  discountType   String       @default("FIXED") // "FIXED" or "PERCENTAGE"
+  deliveryFee    Float        @default(0) // Valor do frete/motoboy
+  total          Float
+  paymentMethod  String       @default("CASH") // "CASH", "CREDIT_CARD", "DEBIT_CARD", "PIX", "A_COMBINAR"
+  paymentStatus  String       @default("PAID") // "PAID", "PENDING"
+  deliveryMethod String       @default("PICKUP") // "PICKUP", "DELIVERY"
+  observation    String?
+  userId         String // Vendedor
+  user           User         @relation(fields: [userId], references: [id])
+  clientId       String? // Cliente opcional
+  client         Client?      @relation(fields: [clientId], references: [id])
+  conditionalId  String?
+  conditional    Conditional? @relation(fields: [conditionalId], references: [id])
+  items          SaleItem[]
+  transaction    Transaction?
+  createdAt      DateTime     @default(now())
+
+  version   Int       @default(1)
+  deletedAt DateTime?
+
+  @@index([storeId])
+  @@index([storeId, id])
+  @@index([storeId, createdAt])
+}
+
+model SaleItem {
+  id          String           @id @default(uuid())
+  saleId      String
+  sale        Sale             @relation(fields: [saleId], references: [id])
+  variationId String // Aponta para a variação específica (cor/tamanho)
+  variation   ProductVariation @relation(fields: [variationId], references: [id])
+  quantity    Int
+  unitPrice   Float // Preço no momento da venda (histórico)
+
+  // Snapshots para Relatório Histórico Blindado
+  productNameSnapshot   String?
+  variationCodeSnapshot Int?
+  colorSnapshot         String?
+  sizeSnapshot          String?
+  priceSnapshot         Float?
+
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId])
+  @@index([storeId, id])
+}
+
+model Conditional {
+  id String @id @default(uuid())
+
+  storeId String?
+  store   Store?  @relation(fields: [storeId], references: [id])
+
+  subtotal       Float             @default(0)
+  discount       Float             @default(0)
+  discountType   String            @default("FIXED") // "FIXED" or "PERCENTAGE"
+  deliveryFee    Float             @default(0)
+  total          Float             @default(0)
+  deliveryMethod String            @default("PICKUP") // "PICKUP", "DELIVERY"
+  clientId       String?
+  client         Client?           @relation(fields: [clientId], references: [id])
+  userId         String
+  user           User              @relation(fields: [userId], references: [id])
+  items          ConditionalItem[]
+  status         ConditionalStatus @default(PENDING)
+  returnDate     DateTime
+  observation    String?
+  orderNotes     String?
+  sales          Sale[]
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  deletedAt DateTime?
+
+  @@index([storeId])
+  @@index([storeId, id])
+}
+
+model ConditionalItem {
+  id            String           @id @default(uuid())
+  conditionalId String
+  conditional   Conditional      @relation(fields: [conditionalId], references: [id])
+  variationId   String
+  variation     ProductVariation @relation(fields: [variationId], references: [id])
+  quantity      Int
+  unitPrice     Float
+
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId])
+  @@index([storeId, id])
+}
+
+model Transaction {
+  id String @id @default(uuid())
+
+  storeId String?
+  store   Store?  @relation(fields: [storeId], references: [id])
+
+  type           TransactionType
+  description    String
+  subDescription String?
+  category       String?
+  method         String? // CASH, CREDIT_CARD, DEBIT_CARD, PIX, etc.
+  value          Float
+  date           DateTime        @default(now())
+  userId         String
+  user           User            @relation(fields: [userId], references: [id])
+  saleId         String?         @unique
+  sale           Sale?           @relation(fields: [saleId], references: [id])
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([storeId])
+  @@index([storeId, id])
+}
+
+enum TransactionType {
+  IN
+  OUT
+}
+
+enum ConditionalStatus {
+  PENDING
+  FINISHED
+  RETURNED
+  PARTIAL_RETURNED
+  OVERDUE
+}
+
+enum CategoryType {
+  ROUPA
+  ACESSORIO
+  CALCADO
+}
+
+enum CategoryStatus {
+  ATIVA
+  INATIVA
+}
+
+enum CategoryPublic {
+  FEMININO
+  MASCULINO
+  INFANTIL
+  UNISSEX
+}
+
+model StoreCounter {
+  id String @id @default(uuid())
+
+  storeId String @unique
+  store   Store  @relation(fields: [storeId], references: [id])
+
+  productCount   Int @default(0) // Contador sequencial de produtos
+  variationCount Int @default(0) // Contador sequencial global de variações
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([storeId])
+  @@index([storeId, id])
+}
+
+enum CategorySeasonality {
+  VERAO
+  INVERNO
+  MEIA_ESTACAO
+  ATEMPORAL
+}
+
+enum PlanType {
+  FREE
+  PRO
+  PRO_PLUS
+}
+
+model StoreSettings {
+  id      String @id @default(uuid())
+  storeId String @unique
+
+  // Geral
+  // Logo
+  logo        String?
+  storeName   String?
+  fantasyName String?
+  document    String?
+  phone       String?
+  whatsapp    String?
+  email       String?
+  address     String?
+
+  // Produtos
+  allowProductWithoutSku Boolean @default(false)
+  controlStock           Boolean @default(true)
+
+  // Vendas
+  allowSellZeroStock Boolean @default(false)
+  allowNegativeStock Boolean @default(false)
+  receiptMessage     String?
+  maxDiscountPercent Float?
+
+  // Financeiro
+  defaultCardFee              Float?
+  defaultCardCompensationDays Int?
+
+  // Catálogo
+  catalogShowPrice        Boolean @default(true)
+  catalogShowStock        Boolean @default(false)
+  catalogShowVariations   Boolean @default(true)
+  catalogAllowDirectOrder Boolean @default(false)
+  catalogWhatsapp         String?
+  catalogAutoMessage      String?
+
+  // Visual do Catálogo
+  catalogPrimaryColor    String @default("#0158ad")
+  catalogSecondaryColor  String @default("#1e293b")
+  catalogBackgroundColor String @default("#f8fafc")
+  catalogCardColor       String @default("#ffffff")
+  catalogTextColor       String @default("#1e293b")
+  catalogPriceColor      String @default("#0158ad")
+
+  catalogLayout  String @default("grid") // grid, list, compact
+  catalogColumns Int    @default(4)
+
+  catalogCardRadius Int    @default(16) // px
+  catalogCardShadow String @default("md") // none, sm, md, lg
+
+  catalogButtonFormat   String  @default("rounded") // rect, rounded, pill
+  catalogShowButtonIcon Boolean @default(true)
+  catalogButtonText     String  @default("Ver Detalhes")
+
+  catalogBannerImage       String?
+  catalogBannerImageMobile String?
+  catalogBannerHeight      Int     @default(300)
+  catalogBannerOverlay     Int     @default(40) // % opacity
+  catalogShowBannerTitle   Boolean @default(true)
+
+  // Banner Content
+  catalogBannerTag        String?
+  catalogBannerTitle      String?
+  catalogBannerSubtitle   String?
+  catalogBannerButtonText String?
+  catalogShowBannerButton Boolean @default(true)
+  catalogBannerLink       String?
+
+  // Layout Mobile
+  catalogLayoutMobile String @default("list")
+
+  // Showcases
+  catalogShowHighlights     Boolean @default(true)
+  catalogHighlightsTitle    String?
+  catalogHighlightsSubtitle String?
+
+  catalogShowNewArrivals     Boolean @default(true)
+  catalogNewArrivalsTitle    String?
+  catalogNewArrivalsSubtitle String?
+
+  catalogShowOptional     Boolean @default(false)
+  catalogOptionalTitle    String?
+  catalogOptionalSubtitle String?
+
+  // Novas configurações de catálogo
+  catalogActive        Boolean @default(true)
+  catalogSlug          String? @unique
+  catalogInstagram     String?
+  catalogLogo          String?
+  catalogFooterMessage String?
+  catalogContactEmail  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id])
+
+  @@index([storeId])
+  @@index([storeId, id])
+}
+
+model CatalogConfig {
+  id      String @id @default(uuid())
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deletedAt DateTime?
+
+  @@index([storeId])
+  @@index([storeId, id])
+}
+
+model Banner {
+  id      String @id @default(uuid())
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deletedAt DateTime?
+
+  @@index([storeId])
+  @@index([storeId, id])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  storeId   String
+  userId    String?
+  action    String
+  entity    String
+  entityId  String
+  before    Json?
+  after     Json?
+  createdAt DateTime @default(now())
+
+  @@index([storeId])
+  @@index([entity, entityId])
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  TRIAL
+  EXPIRED
+}
+
+model Plan {
+  id                   String   @id @default(cuid())
+  name                 String   @unique // FREE | PRO | PRO_PLUS
+  description          String?
+  priceMonthly         Float    @default(0)
+  priceYearly          Float    @default(0)
+  features             Json     @default("{}")
+  limits               Json     @default("{}")
+  stripePriceIdMonthly String?
+  stripePriceIdYearly  String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  subscriptions StoreSubscription[]
+}
+
+model StoreSubscription {
+  id                     String             @id @default(cuid())
+  storeId                String
+  planId                 String
+  status                 SubscriptionStatus @default(ACTIVE)
+  startedAt              DateTime           @default(now())
+  endsAt                 DateTime?
+  autoRenew              Boolean            @default(false)
+  paymentProvider        String?
+  externalSubscriptionId String?
+
+  store Store @relation(fields: [storeId], references: [id])
+  plan  Plan  @relation(fields: [planId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([storeId])
+  @@index([storeId, status])
+  @@index([planId])
+}
+
+model FeatureUsage {
+  id         String   @id @default(cuid())
+  storeId    String
+  featureKey String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId])
+  @@index([storeId, featureKey])
+}

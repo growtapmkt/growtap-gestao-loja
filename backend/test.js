@@ -1,0 +1,1 @@
+fetch('http://localhost:5000/api/products', {method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer teste'},body:JSON.stringify({name:'v',price:10})}).then(r=>r.json()).then(console.log)

@@ -1,0 +1,35 @@
+{
+  "name": "growtap-backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "env:dev": "copy .env.dev .env",
+    "env:prod": "copy .env.prod .env",
+    "migrate:dev": "npm run env:dev && npx prisma migrate dev --schema src/prisma/schema.prisma",
+    "migrate:prod": "npm run env:prod && npx prisma migrate deploy --schema src/prisma/schema.prisma",
+    "postinstall": "npx prisma generate --schema=src/prisma/schema.prisma",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@prisma/client": "^6.4.1",
+    "bcryptjs": "^3.0.3",
+    "body-parser": "^2.2.2",
+    "cors": "^2.8.6",
+    "date-fns": "^4.1.0",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.18.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11",
+    "prisma": "^6.4.1"
+  }
+}
