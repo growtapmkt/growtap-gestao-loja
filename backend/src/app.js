@@ -23,10 +23,7 @@ dotenv.config();
 const app = express();
 
 // Proteção Crítica: Impede inicializar Banco Incorreto em ambiente PROD
-const PROD_PROJECT_ID = "bbmkrcugsvpbbshpjxuy"; // ID do projeto PROD no Supabase
-if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL?.includes(PROD_PROJECT_ID)) {
-  throw new Error('ERRO FATAL: Banco incorreto em ambiente de produção.');
-}
+// Removida: Permite utilizar outros bancos de dados de produção compatíveis com Prisma.
 // Middlewares
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
