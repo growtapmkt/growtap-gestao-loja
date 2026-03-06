@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Plus,
   Search,
   Filter,
   MoreHorizontal,
@@ -35,7 +34,9 @@ import {
   Check,
   ArrowUpDown,
   Save,
-  Save as SaveIcon
+  Save as SaveIcon,
+  Plus,
+  Minus
 } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 
@@ -161,11 +162,27 @@ const Inventory: React.FC = () => {
         throw new Error(data.message || 'Erro ao adicionar variação');
       }
 
+      // Adiciona uma variação temporária no estado local para feedback visual instantâneo
+      const tempVariation = {
+        id: data.id || data.variation?.id || Math.random().toString(),
+        color: vColor,
+        size: vSize,
+        quantity: parseInt(vQty),
+      };
+
+      setProducts(products.map(p => {
+        if (p.id === selectedProduct.id) {
+          const currentVariations = p.variations || [];
+          return { ...p, variations: [...currentVariations, tempVariation] };
+        }
+        return p;
+      }));
+
       setShowVariationForm(false);
       setVColor('');
       setVSize('');
       setVQty('');
-      fetchProducts();
+      await fetchProducts();
     } catch (err: any) {
       alert(err.message);
     } finally {
@@ -301,7 +318,7 @@ const Inventory: React.FC = () => {
     setEditingVariationId(variation.id);
     setEditVColor(variation.color || '');
     setEditVSize(variation.size || '');
-    setEditVQty(variation.quantity.toString());
+    setEditVQty(variation.quantity === 0 ? '' : variation.quantity.toString());
   };
 
   const handleCancelEditVariation = () => {
@@ -635,6 +652,7 @@ const Inventory: React.FC = () => {
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">R$</span>
                   <input
                     type="number"
+                    inputMode="decimal"
                     placeholder="Mínimo"
                     value={filterMinPrice}
                     onChange={(e) => setFilterMinPrice(e.target.value)}
@@ -646,6 +664,7 @@ const Inventory: React.FC = () => {
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">R$</span>
                   <input
                     type="number"
+                    inputMode="decimal"
                     placeholder="Máximo"
                     value={filterMaxPrice}
                     onChange={(e) => setFilterMaxPrice(e.target.value)}
@@ -929,48 +948,6 @@ const Inventory: React.FC = () => {
           </table>
         </div>
 
-        {/* Pagination Footer */}
-        <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-200 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-500">Exibir:</span>
-            <select
-              value={limit}
-              onChange={(e) => {
-                setLimit(Number(e.target.value));
-                setPage(1); // Resetar página ao mudar limite
-              }}
-              className="px-2 py-1 bg-white border border-slate-200 rounded text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
-            >
-              <option value={10}>10 ▼</option>
-              <option value={20}>20 ▼</option>
-              <option value={30}>30 ▼</option>
-            </select>
-            <span className="text-xs font-bold text-slate-500 ml-2">
-              Mostrando {products.length} de {totalItems} itens
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setPage(p => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="px-3 py-1 bg-white border border-slate-200 rounded text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Anterior
-            </button>
-            <span className="text-xs font-bold text-slate-600 px-2">
-              Página {page} de {totalPages}
-            </span>
-            <button
-              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-              className="px-3 py-1 bg-white border border-slate-200 rounded text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Próxima
-            </button>
-          </div>
-        </div>
-
         {/* Lista Mobile (Cards) */}
         <div className="block md:hidden space-y-4 p-4">
           {
@@ -1038,18 +1015,18 @@ const Inventory: React.FC = () => {
                         )}
                       </div>
 
-                      <div className="flex-1 flex justify-between items-start gap-4">
+                      <div className="flex-1 flex flex-col gap-2">
                         <div>
-                          <h3 className="font-bold text-slate-800 text-sm uppercase tracking-tight line-clamp-2">{product.name}</h3>
+                          <h3 className="font-bold text-slate-800 text-sm uppercase tracking-tight line-clamp-3">{product.name}</h3>
                           <div className="flex flex-wrap gap-2 mt-1">
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">SKU: {product.sku}</p>
                             <span className="text-[10px] text-slate-300">•</span>
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{product.category?.name || '-'}</p>
                           </div>
                         </div>
-                        <div className="text-right">
+                        <div className="text-left mt-1">
                           {product.isPromotionalPrice && product.promotionalPrice ? (
-                            <div className="flex flex-col items-end">
+                            <div className="flex items-center gap-2">
                               <p className="text-lg font-black text-slate-800 tracking-tight whitespace-nowrap">R$ {product.promotionalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                               <p className="text-xs font-bold text-slate-400 line-through whitespace-nowrap">R$ {product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                             </div>
@@ -1064,10 +1041,10 @@ const Inventory: React.FC = () => {
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Variações em Estoque</p>
                       <div className="flex flex-wrap gap-2">
                         {product.variations && product.variations.length > 0 ? product.variations.map((v: any, idx: number) => (
-                          <div key={idx} className={`text-[10px] px-2.5 py-1.5 rounded-lg border font-bold uppercase tracking-tight flex items-center gap-1 ${v.quantity < 5 ? 'bg-red-50 text-red-600 border-red-100' : 'bg-slate-50 text-slate-600 border-slate-100'}`}>
+                          <div key={idx} className={`text-[10px] px-2.5 py-1.5 rounded-lg border font-bold uppercase tracking-tight flex items-center gap-1 ${v.quantity === 0 ? 'bg-red-50 text-red-600 border-red-100' : 'bg-[#0158ad]/10 text-[#0158ad] border-[#0158ad]/20'}`}>
                             <span>{v.size}</span>
-                            {v.color && <span className="text-slate-400">• {v.color}</span>}
-                            <span className={`px-1.5 py-0.5 rounded text-[9px] ${v.quantity < 5 ? 'bg-red-100 text-red-700' : 'bg-slate-200 text-slate-700'}`}>{v.quantity}</span>
+                            {v.color && <span className="opacity-70">• {v.color}</span>}
+                            <span className={`px-1.5 py-0.5 rounded text-[9px] ${v.quantity === 0 ? 'bg-red-100 text-red-700' : 'bg-[#0158ad]/20 text-[#0158ad]'}`}>{v.quantity}</span>
                           </div>
                         )) : <span className="text-[10px] text-slate-400">-</span>}
                       </div>
@@ -1111,6 +1088,48 @@ const Inventory: React.FC = () => {
                 ))}
               </div>
             )}
+        </div>
+
+        {/* Pagination Footer */}
+        <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-200 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-500">Exibir:</span>
+            <select
+              value={limit}
+              onChange={(e) => {
+                setLimit(Number(e.target.value));
+                setPage(1); // Resetar página ao mudar limite
+              }}
+              className="px-2 py-1 bg-white border border-slate-200 rounded text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
+            >
+              <option value={10}>10 ▼</option>
+              <option value={20}>20 ▼</option>
+              <option value={30}>30 ▼</option>
+            </select>
+            <span className="text-xs font-bold text-slate-500 ml-2">
+              Mostrando {products.length} de {totalItems} itens
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-3 py-1 bg-white border border-slate-200 rounded text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Anterior
+            </button>
+            <span className="text-xs font-bold text-slate-600 px-2">
+              Página {page} de {totalPages}
+            </span>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="px-3 py-1 bg-white border border-slate-200 rounded text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Próxima
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1253,20 +1272,45 @@ const Inventory: React.FC = () => {
                                 </div>
 
                                 {/* Estoque */}
-                                <div className="w-28 space-y-1">
+                                <div className="w-32 space-y-1">
                                   <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wide block">Estoque</label>
-                                  <div className="relative">
+                                  <div className="flex relative items-center rounded-lg border border-slate-200 bg-white focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-all overflow-hidden">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingVariationId(variation.id);
+                                        const current = parseInt(editingVariationId === variation.id ? editVQty : variation.quantity) || 0;
+                                        const newVal = Math.max(0, current - 1);
+                                        setEditVQty(newVal === 0 ? '' : newVal.toString());
+                                      }}
+                                      className="h-10 w-8 flex items-center justify-center bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-700 font-bold border-r border-slate-200 transition-colors shrink-0"
+                                    >
+                                      <Minus size={14} />
+                                    </button>
                                     <input
                                       type="number"
+                                      inputMode="numeric"
                                       placeholder="0"
-                                      className="w-full pl-3 pr-10 py-2.5 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
-                                      value={editingVariationId === variation.id ? editVQty : variation.quantity}
+                                      className="w-full text-center py-2.5 text-sm font-medium text-slate-700 focus:outline-none bg-transparent"
+                                      value={editingVariationId === variation.id ? editVQty : (variation.quantity === 0 ? '' : variation.quantity)}
                                       onChange={(e) => {
                                         setEditingVariationId(variation.id);
                                         setEditVQty(e.target.value);
                                       }}
                                     />
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">un</span>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingVariationId(variation.id);
+                                        const current = parseInt(editingVariationId === variation.id ? editVQty : variation.quantity) || 0;
+                                        setEditVQty((current + 1).toString());
+                                      }}
+                                      className="h-10 w-8 flex items-center justify-center bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-700 font-bold border-l border-slate-200 transition-colors shrink-0"
+                                    >
+                                      <Plus size={14} />
+                                    </button>
                                   </div>
                                 </div>
                               </div>
@@ -1295,7 +1339,12 @@ const Inventory: React.FC = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setShowVariationForm(false)}
+                    onClick={async () => {
+                      if (editingVariationId) {
+                        await handleSaveVariation(editingVariationId);
+                      }
+                      setShowVariationForm(false);
+                    }}
                     className="flex-1 py-3 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-wider hover:bg-slate-800 active:scale-[0.98] transition-all"
                   >
                     Salvar

@@ -55,7 +55,7 @@ const App: React.FC = () => {
 
   return (
     <Router>
-      <div className="flex h-screen bg-slate-50 overflow-hidden pt-0 relative">
+      <div className="flex h-[100dvh] bg-slate-50 overflow-hidden pt-0 relative">
         {!isCatalogPage && (
           <Sidebar
             onLogout={handleLogout}
@@ -70,7 +70,7 @@ const App: React.FC = () => {
               onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
             />
           )}
-          <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+          <main className="flex-1 overflow-y-auto p-4 pb-[calc(2rem+env(safe-area-inset-bottom))] sm:p-6 lg:p-8">
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/inventory" element={<Inventory />} />

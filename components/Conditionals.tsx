@@ -328,17 +328,17 @@ const Conditionals: React.FC = () => {
                 </button>
                 <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Nova Condicional</h3>
               </div>
-              <div className="relative sticky top-0 z-20 bg-slate-50 pb-4 pt-1 md:static md:bg-transparent md:p-0">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={24} />
+              <div className="relative sticky top-0 z-20 bg-slate-50 pb-3 pt-1 md:static md:bg-transparent md:p-0">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input
                   type="text"
                   placeholder="Pesquisar por nome ou SKU..."
-                  className="w-full pl-14 pr-6 py-4 md:py-5 bg-white border border-slate-200 rounded-[24px] text-lg font-medium focus:outline-none focus:ring-4 focus:ring-[#0158ad]/10 shadow-sm transition-all"
+                  className="w-full pl-11 pr-4 py-3 md:py-3.5 bg-white border border-slate-200 rounded-2xl text-sm font-medium focus:outline-none focus:ring-4 focus:ring-[#0158ad]/10 shadow-sm transition-all"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-[55vh] md:h-[calc(100vh-320px)] overflow-y-auto pr-2 custom-scrollbar pb-20 md:pb-0">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-[55vh] md:h-[calc(100vh-320px)] overflow-y-auto pr-2 custom-scrollbar pb-[calc(8rem+env(safe-area-inset-bottom))] md:pb-0">
                 {filteredProducts.map(p => (
                   <div key={p.id} className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-3">
                     <div className="flex justify-between items-start gap-3">
@@ -366,10 +366,10 @@ const Conditionals: React.FC = () => {
                             onClick={() => addToCart(p, v)}
                             disabled={v.quantity <= 0}
                             className={`px-2.5 py-1.5 rounded-xl text-[10px] font-bold border transition-all flex flex-col items-center gap-0.5 min-w-[50px] ${isSelected
-                                ? 'border-[#0158ad] bg-[#0158ad] text-white shadow-md'
-                                : v.quantity > 0
-                                  ? 'border-slate-100 bg-slate-50 text-slate-700 hover:border-[#0158ad] hover:bg-blue-50 hover:text-[#0158ad]'
-                                  : 'border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed'
+                              ? 'border-[#0158ad] bg-[#0158ad] text-white shadow-md'
+                              : v.quantity > 0
+                                ? 'border-slate-100 bg-slate-50 text-slate-700 hover:border-[#0158ad] hover:bg-blue-50 hover:text-[#0158ad]'
+                                : 'border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed'
                               }`}
                           >
                             <span>{v.size} {v.color && `• ${v.color}`}</span>
@@ -384,218 +384,244 @@ const Conditionals: React.FC = () => {
             </>
           ) : (
             // Checkout Section (omitted specific lines for brevity, assume unchanged logic)
-            <div className="bg-white rounded-[32px] border border-slate-200 shadow-sm overflow-hidden flex flex-col p-6 md:p-8 space-y-6 md:space-y-8 animate-in fade-in slide-in-from-right-4 duration-300 h-full md:h-auto overflow-y-auto md:overflow-visible pb-32 md:pb-8">
-              <div className="flex items-center gap-4 sticky top-0 bg-white z-10 py-2">
-                <button onClick={() => setShowPOSCheckout(false)} className="p-2 bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition-colors">
+            <div className="space-y-6 h-full md:h-auto flex flex-col">
+              <div className="flex items-center gap-4 bg-slate-50 z-10">
+                <button onClick={() => setShowPOSCheckout(false)} className="p-2 bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-slate-800 transition-colors">
                   <ArrowLeft size={20} />
                 </button>
                 <h3 className="text-xl md:text-2xl font-black text-slate-800">Finalização da Condicional</h3>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 items-start">
-                {/* Row 1: Identificar Cliente & Descontos */}
-                <div className="space-y-2">
-                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 h-4">
-                    <User size={14} /> Identificar Cliente
-                  </label>
-                  <div className="relative group">
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                      <Search size={16} />
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="Buscar por nome ou CPF..."
-                      className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
-                      value={clientSearch}
-                      onChange={(e) => setClientSearch(e.target.value)}
-                    />
-                    {clientSearch && !checkoutData.clientId && (
-                      <div className="absolute z-50 left-0 right-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                        <div className="max-h-[250px] overflow-y-auto custom-scrollbar">
-                          {clients.filter(c => c.name.toLowerCase().includes(clientSearch.toLowerCase())).map(c => (
-                            <button
-                              key={c.id}
-                              onClick={() => {
-                                setCheckoutData({ ...checkoutData, clientId: c.id });
-                                setClientSearch(c.name);
-                              }}
-                              className="w-full p-4 text-left hover:bg-slate-50 flex items-center justify-between border-b border-slate-50 transition-colors"
-                            >
-                              <div>
-                                <p className="text-sm font-black text-slate-700">{c.name}</p>
-                                {c.cpf && <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">CPF: {c.cpf}</p>}
-                              </div>
-                              <Plus size={16} className="text-[#0158ad]" />
-                            </button>
-                          ))}
-                        </div>
+              <div className="bg-white rounded-[32px] border border-slate-200 shadow-sm overflow-hidden flex flex-col p-6 md:p-8 space-y-6 md:space-y-8 animate-in fade-in slide-in-from-right-4 duration-300 flex-1 md:flex-none overflow-y-auto md:overflow-visible pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 items-start">
+                  {/* Row 1: Identificar Cliente & Descontos */}
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 h-4">
+                      <User size={14} /> Identificar Cliente
+                    </label>
+                    <div className="relative group">
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                        <Search size={16} />
                       </div>
+                      <input
+                        type="text"
+                        placeholder="Buscar por nome ou CPF..."
+                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+                        value={clientSearch}
+                        onChange={(e) => setClientSearch(e.target.value)}
+                      />
+                      {clientSearch && !checkoutData.clientId && (
+                        <div className="absolute z-50 left-0 right-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                          <div className="max-h-[250px] overflow-y-auto custom-scrollbar">
+                            {clients.filter(c => c.name.toLowerCase().includes(clientSearch.toLowerCase())).map(c => (
+                              <button
+                                key={c.id}
+                                onClick={() => {
+                                  setCheckoutData({ ...checkoutData, clientId: c.id });
+                                  setClientSearch(c.name);
+                                }}
+                                className="w-full p-4 text-left hover:bg-slate-50 flex items-center justify-between border-b border-slate-50 transition-colors"
+                              >
+                                <div>
+                                  <p className="text-sm font-black text-slate-700">{c.name}</p>
+                                  {c.cpf && <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">CPF: {c.cpf}</p>}
+                                </div>
+                                <Plus size={16} className="text-[#0158ad]" />
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    {checkoutData.clientId && (
+                      <p className="text-[10px] text-emerald-500 font-black uppercase mt-1 px-1 flex items-center gap-1">
+                        <CheckCircle size={10} /> Selecionado: {clients.find(c => c.id === checkoutData.clientId)?.name}
+                      </p>
                     )}
                   </div>
-                  {checkoutData.clientId && (
-                    <p className="text-[10px] text-emerald-500 font-black uppercase mt-1 px-1 flex items-center gap-1">
-                      <CheckCircle size={10} /> Selecionado: {clients.find(c => c.id === checkoutData.clientId)?.name}
-                    </p>
-                  )}
-                </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center h-4">Tipo Desconto</label>
-                    <select
-                      className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#0158ad]/20"
-                      value={checkoutData.discountType}
-                      onChange={(e) => setCheckoutData({ ...checkoutData, discountType: e.target.value as 'FIXED' | 'PERCENTAGE' })}
-                    >
-                      <option value="FIXED">Valor Fixo</option>
-                      <option value="PERCENTAGE">Porcentagem</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center h-4">Valor Desconto</label>
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#0158ad]/20"
-                      placeholder="0,00"
-                      value={checkoutData.discount === 0 ? '' : checkoutData.discount}
-                      onChange={(e) => {
-                        const val = e.target.value.replace(',', '.');
-                        setCheckoutData({ ...checkoutData, discount: val === '' ? 0 : Number(val) });
-                      }}
-                    />
-                  </div>
-                </div>
-
-                {/* Row 2: Duração & Tipo de Entrega */}
-                <div className="space-y-2">
-                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 h-4">
-                    <Clock size={14} /> Duração da Condicional
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {[24, 48, 72, 168].map(hrs => (
-                      <button
-                        key={hrs}
-                        onClick={() => {
-                          const date = new Date();
-                          date.setHours(date.getHours() + hrs);
-                          const tzOffset = date.getTimezoneOffset() * 60000;
-                          const localISOTime = (new Date(date.getTime() - tzOffset)).toISOString().slice(0, 16);
-                          setCheckoutData({ ...checkoutData, returnDate: localISOTime });
-                          setSelectedDuration(hrs);
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center h-4">Tipo Desconto</label>
+                      <select
+                        className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#0158ad]/20"
+                        value={checkoutData.discountType}
+                        onChange={(e) => setCheckoutData({ ...checkoutData, discountType: e.target.value as 'FIXED' | 'PERCENTAGE' })}
+                      >
+                        <option value="FIXED">Valor Fixo</option>
+                        <option value="PERCENTAGE">Porcentagem</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center h-4">Valor Desconto</label>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#0158ad]/20"
+                        placeholder="0,00"
+                        value={checkoutData.discount === 0 ? '' : checkoutData.discount}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(',', '.');
+                          setCheckoutData({ ...checkoutData, discount: val === '' ? 0 : Number(val) });
                         }}
-                        className={`px-3 py-2 border rounded-xl text-[10px] font-bold transition-all ${selectedDuration === hrs
+                      />
+                    </div>
+                  </div>
+
+                  {/* Row 2: Duração & Tipo de Entrega */}
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 h-4">
+                      <Clock size={14} /> Duração da Condicional
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {[24, 48, 72, 168].map(hrs => (
+                        <button
+                          key={hrs}
+                          onClick={() => {
+                            const date = new Date();
+                            date.setHours(date.getHours() + hrs);
+                            const tzOffset = date.getTimezoneOffset() * 60000;
+                            const localISOTime = (new Date(date.getTime() - tzOffset)).toISOString().slice(0, 16);
+                            setCheckoutData({ ...checkoutData, returnDate: localISOTime });
+                            setSelectedDuration(hrs);
+                          }}
+                          className={`px-3 py-2 border rounded-xl text-[10px] font-bold transition-all ${selectedDuration === hrs
+                            ? 'bg-[#0158ad] text-white border-[#0158ad] shadow-lg shadow-blue-500/20'
+                            : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
+                            }`}
+                        >
+                          {hrs < 168 ? `${hrs}h` : '7 Dias'}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => {
+                          const hrs = Number(prompt('Digite a quantidade de horas:', '24'));
+                          if (hrs) {
+                            const date = new Date();
+                            date.setHours(date.getHours() + hrs);
+                            const tzOffset = date.getTimezoneOffset() * 60000;
+                            const localISOTime = (new Date(date.getTime() - tzOffset)).toISOString().slice(0, 16);
+                            setCheckoutData({ ...checkoutData, returnDate: localISOTime });
+                            setSelectedDuration(hrs);
+                          }
+                        }}
+                        className={`px-3 py-2 border rounded-xl text-[10px] font-bold transition-all ${selectedDuration !== null && ![24, 48, 72, 168].includes(selectedDuration)
+                          ? 'bg-[#0158ad] text-white border-[#0158ad] shadow-lg shadow-blue-500/20'
+                          : 'bg-slate-50 border-slate-200 border-dashed text-slate-400 hover:text-[#0158ad] hover:border-[#0158ad]'
+                          }`}
+                      >
+                        Outro
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 h-4">
+                      <Package size={14} className="text-slate-400" /> Tipo de Entrega
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setCheckoutData({ ...checkoutData, deliveryMethod: 'PICKUP', deliveryFee: 0 })}
+                        className={`px-3 py-2 border rounded-xl text-[10px] font-bold transition-all ${checkoutData.deliveryMethod === 'PICKUP'
                           ? 'bg-[#0158ad] text-white border-[#0158ad] shadow-lg shadow-blue-500/20'
                           : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
                           }`}
                       >
-                        {hrs < 168 ? `${hrs}h` : '7 Dias'}
+                        RETIRADA
                       </button>
-                    ))}
-                    <button
-                      onClick={() => {
-                        const hrs = Number(prompt('Digite a quantidade de horas:', '24'));
-                        if (hrs) {
-                          const date = new Date();
-                          date.setHours(date.getHours() + hrs);
-                          const tzOffset = date.getTimezoneOffset() * 60000;
-                          const localISOTime = (new Date(date.getTime() - tzOffset)).toISOString().slice(0, 16);
-                          setCheckoutData({ ...checkoutData, returnDate: localISOTime });
-                          setSelectedDuration(hrs);
-                        }
+                      <button
+                        type="button"
+                        onClick={() => setCheckoutData({ ...checkoutData, deliveryMethod: 'DELIVERY' })}
+                        className={`px-3 py-2 border rounded-xl text-[10px] font-bold transition-all ${checkoutData.deliveryMethod === 'DELIVERY'
+                          ? 'bg-[#0158ad] text-white border-[#0158ad] shadow-lg shadow-blue-500/20'
+                          : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
+                          }`}
+                      >
+                        ENTREGA
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Row 3: Data de Retorno & Frete */}
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 h-4">
+                      <Calendar size={14} /> Data Limite
+                    </label>
+                    <input type="datetime-local"
+                      className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#0158ad]/20"
+                      value={checkoutData.returnDate}
+                      onChange={(e) => {
+                        setCheckoutData({ ...checkoutData, returnDate: e.target.value });
+                        setSelectedDuration(null);
                       }}
-                      className={`px-3 py-2 border rounded-xl text-[10px] font-bold transition-all ${selectedDuration !== null && ![24, 48, 72, 168].includes(selectedDuration)
-                        ? 'bg-[#0158ad] text-white border-[#0158ad] shadow-lg shadow-blue-500/20'
-                        : 'bg-slate-50 border-slate-200 border-dashed text-slate-400 hover:text-[#0158ad] hover:border-[#0158ad]'
-                        }`}
-                    >
-                      Outro
-                    </button>
+                    />
                   </div>
-                </div>
 
-                <div className="space-y-2">
-                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 h-4">
-                    <Package size={14} className="text-slate-400" /> Tipo de Entrega
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setCheckoutData({ ...checkoutData, deliveryMethod: 'PICKUP', deliveryFee: 0 })}
-                      className={`px-3 py-2 border rounded-xl text-[10px] font-bold transition-all ${checkoutData.deliveryMethod === 'PICKUP'
-                        ? 'bg-[#0158ad] text-white border-[#0158ad] shadow-lg shadow-blue-500/20'
-                        : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
-                        }`}
-                    >
-                      RETIRADA
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCheckoutData({ ...checkoutData, deliveryMethod: 'DELIVERY' })}
-                      className={`px-3 py-2 border rounded-xl text-[10px] font-bold transition-all ${checkoutData.deliveryMethod === 'DELIVERY'
-                        ? 'bg-[#0158ad] text-white border-[#0158ad] shadow-lg shadow-blue-500/20'
-                        : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
-                        }`}
-                    >
-                      ENTREGA
-                    </button>
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center h-4">Frete (R$)</label>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#0158ad]/20"
+                      placeholder="0,00"
+                      value={checkoutData.deliveryFee || ''}
+                      onChange={(e) => setCheckoutData({ ...checkoutData, deliveryFee: Number(e.target.value) })}
+                    />
                   </div>
-                </div>
 
-                {/* Row 3: Data de Retorno & Frete */}
-                <div className="space-y-2">
-                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 h-4">
-                    <Calendar size={14} /> Data Limite
-                  </label>
-                  <input type="datetime-local"
-                    className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#0158ad]/20"
-                    value={checkoutData.returnDate}
-                    onChange={(e) => {
-                      setCheckoutData({ ...checkoutData, returnDate: e.target.value });
-                      setSelectedDuration(null);
-                    }}
-                  />
-                </div>
+                  {/* Row 4: Notas & Observações */}
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center h-4">Notas</label>
+                    <textarea
+                      rows={2}
+                      className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#0158ad]/20"
+                      placeholder="..."
+                      value={checkoutData.orderNotes}
+                      onChange={(e) => setCheckoutData({ ...checkoutData, orderNotes: e.target.value })}
+                    />
+                  </div>
 
-                <div className="space-y-2">
-                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center h-4">Frete (R$)</label>
-                  <input
-                    type="number"
-                    className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#0158ad]/20"
-                    placeholder="0,00"
-                    value={checkoutData.deliveryFee || ''}
-                    onChange={(e) => setCheckoutData({ ...checkoutData, deliveryFee: Number(e.target.value) })}
-                  />
-                </div>
-
-                {/* Row 4: Notas & Observações */}
-                <div className="space-y-2">
-                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center h-4">Notas</label>
-                  <textarea
-                    rows={2}
-                    className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#0158ad]/20"
-                    placeholder="..."
-                    value={checkoutData.orderNotes}
-                    onChange={(e) => setCheckoutData({ ...checkoutData, orderNotes: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center h-4">Obs. Interna</label>
-                  <textarea
-                    rows={2}
-                    className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#0158ad]/20"
-                    placeholder="..."
-                    value={checkoutData.observation}
-                    onChange={(e) => setCheckoutData({ ...checkoutData, observation: e.target.value })}
-                  />
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center h-4">Obs. Interna</label>
+                    <textarea
+                      rows={2}
+                      className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#0158ad]/20"
+                      placeholder="..."
+                      value={checkoutData.observation}
+                      onChange={(e) => setCheckoutData({ ...checkoutData, observation: e.target.value })}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
           )}
         </div>
+
+        {/* Floating Bottom Bar — Mobile only, shown when cart has items and not in checkout */}
+        {!showPOSCheckout && cart.length > 0 && (
+          <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 animate-in slide-in-from-bottom-4 duration-300 pb-[env(safe-area-inset-bottom)]">
+            <div className="bg-slate-900 mx-3 mb-6 rounded-[24px] px-5 py-4 shadow-2xl flex items-center justify-between gap-4">
+              <div className="flex flex-col min-w-0">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  {cart.reduce((acc, i) => acc + i.quantity, 0)} {cart.reduce((acc, i) => acc + i.quantity, 0) === 1 ? 'item' : 'itens'} selecionados
+                </span>
+                <span className="text-2xl font-black text-emerald-400 tracking-tight leading-tight">
+                  R$ {cartTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+              <button
+                onClick={() => setShowPOSCheckout(true)}
+                className="shrink-0 px-6 py-3 bg-[#0158ad] text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-500/30 hover:bg-blue-700 active:scale-95 transition-all flex items-center gap-2"
+              >
+                Continuar <ArrowLeft className="rotate-180" size={16} />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Ajuste no tamanho do layout do carrinho */}
-        <div className="lg:col-span-12 xl:col-span-4 flex flex-col h-auto md:sticky md:top-6 md:h-[calc(100vh-140px)]">
-          <div className={`bg-slate-900 md:rounded-[32px] p-6 md:p-8 flex flex-col flex-1 shadow-2xl text-white overflow-hidden ${cart.length === 0 ? 'rounded-[32px]' : 'rounded-t-[32px] md:rounded-l-[32px]'}`}>
+        <div className={`${showPOSCheckout ? 'flex' : 'hidden md:flex'} lg:col-span-12 xl:col-span-4 flex-col h-auto md:sticky md:top-6 md:h-[calc(100vh-140px)]`}>
+          <div className={`bg-slate-900 md:rounded-[32px] p-6 pb-[calc(2rem+env(safe-area-inset-bottom))] md:pb-8 md:p-8 flex flex-col flex-1 shadow-2xl text-white overflow-hidden ${cart.length === 0 ? 'rounded-[32px]' : 'rounded-t-[32px] md:rounded-l-[32px]'}`}>
             <div className="flex items-center gap-3 mb-6 md:mb-8 shrink-0">
               <div className="w-10 h-10 md:w-12 md:h-12 bg-white/10 rounded-2xl flex items-center justify-center shrink-0">
                 <ShoppingCart size={20} className="text-emerald-400" />
@@ -711,22 +737,22 @@ const Conditionals: React.FC = () => {
             <ArrowLeft size={20} />
           </button>
           <div className="flex items-center gap-4">
-            <div className={`w-12 h-12 ${isEditMode ? 'bg-amber-500' : 'bg-[#0158ad]'} rounded-xl flex items-center justify-center text-white shadow-lg transition-all`}>
+            <div className={`hidden md:flex w-12 h-12 ${isEditMode ? 'bg-amber-500' : 'bg-[#0158ad]'} rounded-xl items-center justify-center text-white shadow-lg transition-all`}>
               {isEditMode ? <Pencil size={24} /> : <ClipboardCheck size={24} />}
             </div>
             <div>
-              <h3 className="text-2xl font-black text-slate-800 leading-tight uppercase tracking-tight">
+              <h3 className="text-lg md:text-2xl font-black text-slate-800 leading-tight uppercase tracking-tight">
                 {isEditMode ? 'Editar Condicional' : `Condicional #${selectedCond.id.split('-')[0].toUpperCase()}`}
               </h3>
-              <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Lançado em {new Date(selectedCond.createdAt).toLocaleString('pt-BR')}</p>
+              <p className="text-[10px] md:text-sm font-bold text-slate-500 uppercase tracking-widest">Lançado em {new Date(selectedCond.createdAt).toLocaleString('pt-BR')}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white w-full rounded-[40px] border border-slate-200 shadow-xl overflow-hidden flex flex-col mb-10">
-          <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
+        <div className="bg-white w-full rounded-[24px] md:rounded-[40px] border border-slate-200 shadow-xl overflow-hidden flex flex-col mb-10">
+          <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 md:space-y-8 custom-scrollbar">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 space-y-3">
+              <div className="bg-slate-50 p-5 md:p-6 rounded-2xl md:rounded-3xl border border-slate-100 space-y-3">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                   <User size={14} className="text-[#0158ad]" /> Cliente Responsável
                 </label>
@@ -742,17 +768,19 @@ const Conditionals: React.FC = () => {
                   <p className="text-sm font-black text-slate-800 uppercase tracking-tight">{selectedCond.client?.name || 'Cliente Avulso'}</p>
                 )}
               </div>
-              <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 space-y-3">
+              <div className="bg-slate-50 p-5 md:p-6 rounded-2xl md:rounded-3xl border border-slate-100 space-y-3">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                   <Calendar size={14} className="text-[#0158ad]" /> Prazo de Retorno
                 </label>
                 {isEditMode ? (
-                  <input
-                    type="datetime-local"
-                    className="w-full bg-white border border-slate-200 p-3 rounded-2xl text-sm font-bold focus:outline-none focus:ring-4 focus:ring-blue-500/5 transition-all"
-                    value={editForm.returnDate}
-                    onChange={(e) => setEditForm({ ...editForm, returnDate: e.target.value })}
-                  />
+                  <div className="w-full bg-white border border-slate-200 rounded-2xl overflow-hidden focus-within:ring-4 focus-within:ring-blue-500/5 transition-all flex justify-center items-center">
+                    <input
+                      type="datetime-local"
+                      className="bg-transparent py-3 px-2 md:p-3 text-[13px] md:text-sm font-bold focus:outline-none text-center w-full"
+                      value={editForm.returnDate}
+                      onChange={(e) => setEditForm({ ...editForm, returnDate: e.target.value })}
+                    />
+                  </div>
                 ) : (
                   <div className="flex items-center gap-2">
                     <span className={`w-2.5 h-2.5 rounded-full ${selectedCond.status === 'OVERDUE' ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}`}></span>
@@ -762,7 +790,7 @@ const Conditionals: React.FC = () => {
                   </div>
                 )}
               </div>
-              <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 space-y-3">
+              <div className="bg-slate-50 p-5 md:p-6 rounded-2xl md:rounded-3xl border border-slate-100 space-y-3">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                   <CreditCard size={14} className="text-[#0158ad]" /> Situação Atual
                 </label>
@@ -779,8 +807,10 @@ const Conditionals: React.FC = () => {
                 <h4 className="text-[11px] font-black text-slate-800 uppercase tracking-widest">Itens Reservados</h4>
                 {isSettling && <span className="text-[11px] font-black text-emerald-500 uppercase tracking-widest">Ajuste as quantidades vendidas abaixo</span>}
               </div>
-              <div className="border border-slate-100 rounded-[32px] overflow-hidden shadow-sm">
-                <table className="w-full text-left">
+
+              {/* Tabela para Desktop */}
+              <div className="hidden md:block border border-slate-100 rounded-[32px] overflow-x-auto shadow-sm custom-scrollbar">
+                <table className="w-full text-left min-w-[600px]">
                   <thead className="bg-slate-50">
                     <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                       <th className="px-8 py-5">Produto</th>
@@ -806,6 +836,7 @@ const Conditionals: React.FC = () => {
                             <div className="flex items-center justify-center gap-2">
                               <input
                                 type="number"
+                                inputMode="numeric"
                                 className="w-16 p-2 bg-emerald-50 border border-emerald-100 rounded-xl text-center text-sm font-black text-emerald-700"
                                 value={settlementQuantities[item.variationId] || 0}
                                 onChange={(e) => setSettlementQuantities({ ...settlementQuantities, [item.variationId]: Math.min(item.quantity, Math.max(0, Number(e.target.value))) })}
@@ -819,6 +850,42 @@ const Conditionals: React.FC = () => {
                     ))}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Cards para Mobile */}
+              <div className="block md:hidden space-y-3">
+                {selectedCond.items.map((item: any, idx: number) => (
+                  <div key={idx} className="bg-slate-50 border border-slate-100 rounded-2xl p-4 shadow-sm space-y-3 relative group">
+                    <div className="flex justify-between items-start gap-4">
+                      <div className="space-y-1.5 flex-1 min-w-0">
+                        <p className="font-bold text-slate-800 text-xs uppercase tracking-tight leading-snug">{item.variation.product.name}</p>
+                        <span className="inline-block bg-white px-2 py-1 rounded-md text-[9px] font-black text-slate-500 uppercase border border-slate-100 shadow-sm">
+                          {item.variation.size} • {item.variation.color || 'Padrão'}
+                        </span>
+                      </div>
+                      <div className="text-right flex flex-col justify-end items-end pb-1 shrink-0">
+                        <p className="text-sm font-black text-slate-800">R$ {(item.unitPrice * (isSettling ? settlementQuantities[item.variationId] || 0 : item.quantity)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        <p className="text-[9px] font-bold text-slate-400">R$ {item.unitPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} un.</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-3 border-t border-slate-200/60 mt-2">
+                      <span className="text-[10px] font-black text-slate-500 uppercase">Qtd original: <span className="text-slate-800 text-xs">{item.quantity}</span></span>
+                      {isSettling && (
+                        <div className="flex items-center gap-2 bg-emerald-50/50 p-1 pl-3 rounded-xl border border-emerald-100/50">
+                          <span className="text-[9px] font-black text-emerald-600 uppercase">Vendidas</span>
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            className="w-12 py-1.5 bg-white border border-emerald-200 rounded-lg text-center text-[11px] font-black text-emerald-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                            value={settlementQuantities[item.variationId] || 0}
+                            onChange={(e) => setSettlementQuantities({ ...settlementQuantities, [item.variationId]: Math.min(item.quantity, Math.max(0, Number(e.target.value))) })}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -907,6 +974,7 @@ const Conditionals: React.FC = () => {
                     <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Valor do Frete (Se houver)</label>
                     <input
                       type="number"
+                      inputMode="decimal"
                       className="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold focus:outline-none"
                       value={editForm.deliveryFee}
                       onChange={(e) => setEditForm({ ...editForm, deliveryFee: Number(e.target.value) })}
@@ -958,16 +1026,16 @@ const Conditionals: React.FC = () => {
               </>
             )}
 
-            <div className="bg-slate-900 rounded-[40px] p-8 text-white space-y-5 shadow-2xl relative overflow-hidden group">
+            <div className="bg-slate-900 rounded-2xl md:rounded-[40px] p-5 md:p-8 text-white space-y-3 md:space-y-5 shadow-2xl relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 blur-[100px] pointer-events-none group-hover:bg-emerald-500/20 transition-all"></div>
-              <div className="flex justify-between items-center text-slate-400 text-xs font-black uppercase tracking-[0.2em] relative z-10">
+              <div className="flex justify-between items-center text-slate-400 text-[9px] md:text-xs font-black uppercase tracking-[0.2em] relative z-10">
                 <span>Subtotal dos Itens</span>
-                <span className="font-bold">R$ {(isSettling ? Object.entries(settlementQuantities).reduce((acc: number, [vid, qty]) => acc + (Number(selectedCond?.items.find((i: any) => i.variationId === vid)?.unitPrice || 0) * Number(qty)), 0) : Number(selectedCond?.subtotal || selectedCond?.items.reduce((acc: number, i: any) => acc + (i.unitPrice * i.quantity), 0) || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                <span className="font-bold text-[11px] md:text-sm">R$ {(isSettling ? Object.entries(settlementQuantities).reduce((acc: number, [vid, qty]) => acc + (Number(selectedCond?.items.find((i: any) => i.variationId === vid)?.unitPrice || 0) * Number(qty)), 0) : Number(selectedCond?.subtotal || selectedCond?.items.reduce((acc: number, i: any) => acc + (i.unitPrice * i.quantity), 0) || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
 
-              <div className="flex justify-between items-center text-slate-400 text-xs font-black uppercase tracking-[0.2em] relative z-10">
+              <div className="flex justify-between items-center text-slate-400 text-[9px] md:text-xs font-black uppercase tracking-[0.2em] relative z-10">
                 <span>Descontos e Frete</span>
-                <span className="font-bold flex items-center gap-2">
+                <span className="font-bold text-[10px] md:text-sm flex items-center gap-1.5 md:gap-2">
                   {isEditMode ? (
                     <>
                       <span className="text-red-400">DESC: - {editForm.discountType === 'FIXED' ? `R$ ${editForm.discount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `${editForm.discount}%`}</span>
@@ -984,9 +1052,9 @@ const Conditionals: React.FC = () => {
                 </span>
               </div>
 
-              <div className="flex justify-between items-center relative z-10 border-t border-white/10 pt-4">
-                <span className="text-xl font-bold uppercase tracking-tight">Total {isSettling ? 'Venda Parcial' : 'Condicional'}</span>
-                <span className="text-4xl font-black text-emerald-400 tracking-tighter shadow-emerald-400/20">
+              <div className="flex justify-between items-center relative z-10 border-t border-white/10 pt-3 md:pt-4">
+                <span className="text-xs md:text-xl font-bold uppercase tracking-tight">Total {isSettling ? 'Venda Parcial' : 'Condicional'}</span>
+                <span className="text-xl md:text-4xl font-black text-emerald-400 tracking-tighter shadow-emerald-400/20">
                   R$ {(() => {
                     const baseSubtotal = isSettling
                       ? Object.entries(settlementQuantities).reduce((acc: number, [vid, qty]) => acc + (Number(selectedCond?.items.find((i: any) => i.variationId === vid)?.unitPrice || 0) * Number(qty)), 0)
@@ -1007,19 +1075,19 @@ const Conditionals: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-8 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-4">
+          <div className="p-6 md:p-8 bg-slate-50 border-t border-slate-100 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
             {(selectedCond.status === 'PENDING' || selectedCond.status === 'OVERDUE') ? (
               <>
                 {isEditMode ? (
-                  <div className="flex flex-1 justify-end gap-3">
-                    <button onClick={() => setIsEditMode(false)} className="px-8 py-4 text-slate-500 font-bold uppercase text-[10px] tracking-widest hover:bg-slate-200 rounded-2xl transition-all">Cancelar</button>
-                    <button onClick={handleUpdate} className="px-12 py-4 bg-amber-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-amber-500/20 hover:bg-amber-600 transition-all flex items-center gap-2">
+                  <div className="flex flex-col md:flex-row flex-1 justify-end gap-3 w-full">
+                    <button onClick={() => { setIsEditMode(false); setShowViewModal(false); }} className="px-8 py-4 text-slate-500 font-bold uppercase text-[10px] tracking-widest hover:bg-slate-200 rounded-2xl transition-all w-full md:w-auto order-2 md:order-1">Cancelar</button>
+                    <button onClick={handleUpdate} className="px-12 py-4 bg-amber-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-amber-500/20 hover:bg-amber-600 transition-all flex items-center justify-center gap-2 w-full md:w-auto order-1 md:order-2">
                       {isSubmitting ? <Loader2 className="animate-spin" size={14} /> : <CheckCircle size={14} />} Salvar Alterações
                     </button>
                   </div>
                 ) : isSettling ? (
-                  <div className="flex flex-1 items-center justify-between">
-                    <button onClick={() => setIsSettling(false)} className="px-6 py-4 text-slate-400 font-black uppercase text-[10px] tracking-widest hover:text-slate-600 transition-all flex items-center gap-2">
+                  <div className="flex flex-col md:flex-row flex-1 items-stretch md:items-center justify-between gap-4 w-full">
+                    <button onClick={() => setIsSettling(false)} className="px-6 py-4 text-slate-400 font-black uppercase text-[10px] tracking-widest hover:text-slate-600 transition-all flex items-center justify-center gap-2 order-2 md:order-1">
                       <ArrowLeft size={14} /> Voltar para Opções
                     </button>
                     <button
@@ -1031,34 +1099,34 @@ const Conditionals: React.FC = () => {
                         })).filter((i: any) => i.quantity > 0);
                         handleFinalize(selectedCond.id, partialItems);
                       }}
-                      className="px-12 py-4 bg-emerald-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-emerald-500/30 hover:bg-emerald-600 hover:-translate-y-1 transition-all flex items-center gap-3"
+                      className="px-12 py-4 bg-emerald-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-emerald-500/30 hover:bg-emerald-600 hover:-translate-y-1 transition-all flex items-center justify-center gap-3 w-full md:w-auto order-1 md:order-2"
                     >
                       Confirmar Venda Parcial <ShoppingCart size={16} />
                     </button>
                   </div>
                 ) : (
-                  <div className="flex flex-1 items-center justify-between">
-                    <div className="flex gap-3">
+                  <div className="flex flex-col md:flex-row flex-1 items-stretch md:items-center justify-between gap-4 w-full">
+                    <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
                       <button
                         onClick={() => handleFinalize(selectedCond.id)}
-                        className="px-8 py-4 bg-emerald-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg flex items-center gap-2 active:scale-95"
+                        className="px-8 py-4 bg-emerald-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg flex items-center justify-center gap-2 active:scale-95 w-full md:w-auto"
                       >
                         Finalizar Total (Compra Tudo)
                       </button>
                       <button
                         onClick={() => setIsSettling(true)}
-                        className="px-8 py-4 bg-[#0158ad] text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg flex items-center gap-2 active:scale-95"
+                        className="px-8 py-4 bg-[#0158ad] text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg flex items-center justify-center gap-2 active:scale-95 w-full md:w-auto"
                       >
                         Finalização Parcial (Escolher Peças)
                       </button>
                       <button
                         onClick={() => handleReturn(selectedCond.id)}
-                        className="px-8 py-4 bg-slate-100 text-slate-500 rounded-2xl border border-slate-200 font-black text-[10px] uppercase tracking-widest hover:bg-white hover:text-orange-500 hover:border-orange-200 transition-all active:scale-95"
+                        className="px-8 py-4 bg-slate-100 text-slate-500 rounded-2xl border border-slate-200 font-black text-[10px] uppercase tracking-widest hover:bg-white hover:text-orange-500 hover:border-orange-200 transition-all active:scale-95 w-full md:w-auto"
                       >
                         Devolver Tudo
                       </button>
                     </div>
-                    <button onClick={() => handleDelete(selectedCond.id)} className="p-4 text-red-300 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all" title="Excluir Definitivamente">
+                    <button onClick={() => handleDelete(selectedCond.id)} className="p-4 text-red-300 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all self-center md:self-auto mt-2 md:mt-0" title="Excluir Definitivamente">
                       <Trash2 size={24} />
                     </button>
                   </div>

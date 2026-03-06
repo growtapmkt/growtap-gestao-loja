@@ -11,7 +11,7 @@ exports.getAllProducts = async (req, res) => {
     const queryOptions = {
       where,
       include: {
-        variations: true,
+        variations: { orderBy: { order: 'asc' } },
         category: true,
         brand: true,
         characteristics: {
@@ -184,6 +184,7 @@ exports.createProduct = async (req, res) => {
               size: v.secondaryValue || v.size,
               quantity: parseInt(v.stock || v.quantity || 0) || 0,
               images: v.images || [],
+              order: idx,
               storeId: req.storeId
             })) : []
           },
@@ -196,7 +197,7 @@ exports.createProduct = async (req, res) => {
           }
         },
         include: {
-          variations: true, // Incluir variações no retorno
+          variations: { orderBy: { order: 'asc' } }, // Incluir variações no retorno
           characteristics: true,
           brand: true
         }
@@ -294,6 +295,7 @@ exports.addVariation = async (req, res) => {
           quantity: parseInt(quantity),
           variationCode: varCode,
           active: true,
+          order: 9999,
           storeId: req.storeId
         }
       });
@@ -580,6 +582,7 @@ exports.updateProduct = async (req, res) => {
         }
 
         let createdCount = 0; // Usado para acessar o bloco reservado
+        let vIdx = 0; // Para ordenar as variações de acordo com a lista enviada
 
         for (const v of body.variations) {
           const color = v.primaryValue ? String(v.primaryValue).trim() : (v.color ? String(v.color).trim() : '');
@@ -616,6 +619,7 @@ exports.updateProduct = async (req, res) => {
               where: { id: targetVar.id, storeId: req.storeId },
               data: {
                 color, size, quantity, images, active,
+                order: vIdx++,
                 lastEntryDate: quantity > targetVar.quantity ? new Date() : undefined
               }
             });
@@ -629,6 +633,7 @@ exports.updateProduct = async (req, res) => {
             await tx.productVariation.create({
               data: {
                 productId, color, size, quantity, images, active,
+                order: vIdx++,
                 variationCode: myCode, // <--- Código do ERP
                 storeId: req.storeId
               }
@@ -685,7 +690,7 @@ exports.updateProduct = async (req, res) => {
       return await tx.product.findUnique({
         where: { id: productId },
         include: {
-          variations: true,
+          variations: { orderBy: { order: 'asc' } },
           category: true,
           brand: true,
           characteristics: { include: { characteristic: true } }

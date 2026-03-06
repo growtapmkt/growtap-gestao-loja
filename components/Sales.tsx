@@ -538,7 +538,7 @@ const Sales: React.FC = () => {
 
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="overflow-x-auto hidden md:block">
-              <table className="w-full text-left min-w-[900px]">
+              <table className="w-full text-left min-w-[900px] whitespace-nowrap">
                 <thead>
                   <tr className="bg-slate-50/50 text-slate-400 text-[10px] font-black uppercase tracking-widest">
                     <th className="px-6 py-4">Venda ID</th>
@@ -553,7 +553,18 @@ const Sales: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredSales.map((s, i) => (
+                  {isLoading ? (
+                    <tr>
+                      <td colSpan={9} className="px-6 py-20 text-center">
+                        <Loader2 className="animate-spin inline-block text-[#0158ad] mb-2" size={32} />
+                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest text-center">Sincronizando registros...</p>
+                      </td>
+                    </tr>
+                  ) : filteredSales.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="px-6 py-20 text-center text-slate-400 italic font-medium uppercase text-[10px] tracking-widest">Nenhuma venda encontrada.</td>
+                    </tr>
+                  ) : filteredSales.map((s, i) => (
                     <tr key={s.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-6 py-4 text-sm font-bold text-slate-500 uppercase">#{s.id.split('-')[0]}</td>
                       <td className="px-6 py-4">
@@ -648,6 +659,11 @@ const Sales: React.FC = () => {
 
             {/* Mobile List (Cards) */}
             <div className="block md:hidden space-y-4 p-4">
+              {filteredSales.length === 0 && !isLoading && (
+                <div className="text-center py-10 text-slate-400 italic text-sm">
+                  Nenhuma venda encontrada.
+                </div>
+              )}
               {filteredSales.map((s) => (
                 <div key={s.id} className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3">
                   <div className="flex justify-between items-start">
@@ -732,9 +748,9 @@ const Sales: React.FC = () => {
           </div>
         </>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           {/* Lado Esquerdo: Busca de Produtos ou Checkout */}
-          <div className="lg:col-span-12 xl:col-span-8 space-y-6">
+          <div className="lg:col-span-7 xl:col-span-8 space-y-6">
             {!showCheckout ? (
               <>
                 <div className="flex items-center gap-4">
@@ -744,18 +760,18 @@ const Sales: React.FC = () => {
                   <h3 className="text-2xl font-black text-slate-800">Ponto de Venda</h3>
                 </div>
 
-                <div className="relative sticky top-0 z-20 bg-slate-50 pb-4 pt-1 md:static md:bg-transparent md:p-0">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={24} />
+                <div className="relative sticky top-0 z-20 bg-slate-50 pb-3 pt-1 md:static md:bg-transparent md:p-0">
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                   <input
                     type="text"
                     placeholder="Pesquisar por nome ou SKU..."
-                    className="w-full pl-14 pr-6 py-4 md:py-5 bg-white border border-slate-200 rounded-[24px] text-lg font-medium focus:outline-none focus:ring-4 focus:ring-[#0158ad]/10 shadow-sm transition-all"
+                    className="w-full pl-11 pr-4 py-3 md:py-3.5 bg-white border border-slate-200 rounded-2xl text-sm font-medium focus:outline-none focus:ring-4 focus:ring-[#0158ad]/10 shadow-sm transition-all"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-[55vh] md:h-[calc(100vh-320px)] overflow-y-auto pr-2 custom-scrollbar pb-20 md:pb-0">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-[55vh] md:h-[calc(100vh-320px)] overflow-y-auto pr-2 custom-scrollbar pb-[calc(8rem+env(safe-area-inset-bottom))] md:pb-0">
                   {filteredProducts.map(p => (
                     <div key={p.id} className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-3">
                       <div className="flex justify-between items-start gap-3">
@@ -808,208 +824,235 @@ const Sales: React.FC = () => {
               </>
             ) : (
               // Checkout Section (omitted specific lines for brevity, assume unchanged logic)
-              <div className="bg-white rounded-[32px] border border-slate-200 shadow-sm overflow-hidden flex flex-col p-6 md:p-8 space-y-6 md:space-y-8 animate-in fade-in slide-in-from-right-4 duration-300 h-full md:h-auto overflow-y-auto md:overflow-visible pb-32 md:pb-8">
-                <div className="flex items-center gap-4 sticky top-0 bg-white z-10 py-2">
-                  <button onClick={() => setShowCheckout(false)} className="p-2 bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition-colors">
+              <div className="space-y-6 h-full md:h-auto flex flex-col">
+                <div className="flex items-center gap-4 bg-slate-50 z-10">
+                  <button onClick={() => setShowCheckout(false)} className="p-2 bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-slate-800 transition-colors">
                     <ArrowLeft size={20} />
                   </button>
                   <h3 className="text-xl md:text-2xl font-black text-slate-800">Detalhes do Pagamento</h3>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 items-start">
-                  {/* Row 1: Cliente & Descontos */}
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 h-4">
-                      <User size={14} /> Cliente
-                    </label>
-                    <div className="relative group">
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                        <Search size={16} />
-                      </div>
-                      <input
-                        type="text"
-                        placeholder="Buscar cliente..."
-                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
-                        value={clientSearch}
-                        onChange={(e) => setClientSearch(e.target.value)}
-                      />
-                      {clientSearch.length > 0 && (
-                        <div className="absolute z-50 left-0 right-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                          <div className="max-h-[250px] overflow-y-auto custom-scrollbar">
-                            <button
-                              onClick={() => {
-                                setCheckoutData({ ...checkoutData, clientId: '' });
-                                setClientSearch('');
-                              }}
-                              className="w-full p-4 text-left hover:bg-slate-50 flex items-center justify-between border-b border-slate-50 transition-colors"
-                            >
-                              <div>
-                                <p className="text-sm font-black text-[#0158ad]">Venda Rápida</p>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Consumidor Final</p>
-                              </div>
-                              {!checkoutData.clientId && <CheckCircle2 size={16} className="text-emerald-500" />}
-                            </button>
-
-                            {clients
-                              .filter(c =>
-                                c.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
-                                (c.cpf && c.cpf.includes(clientSearch))
-                              )
-                              .map(c => (
-                                <button
-                                  key={c.id}
-                                  onClick={() => {
-                                    setCheckoutData({ ...checkoutData, clientId: c.id });
-                                    setClientSearch('');
-                                  }}
-                                  className="w-full p-4 text-left hover:bg-slate-50 flex items-center justify-between border-b border-slate-50 last:border-0 transition-colors"
-                                >
-                                  <div>
-                                    <p className="text-sm font-black text-slate-700">{c.name}</p>
-                                    {c.cpf && <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">CPF: {c.cpf}</p>}
-                                  </div>
-                                  {checkoutData.clientId === c.id && <CheckCircle2 size={16} className="text-emerald-500" />}
-                                </button>
-                              ))
-                            }
-
-                            {clients.filter(c =>
-                              c.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
-                              (c.cpf && c.cpf.includes(clientSearch))
-                            ).length === 0 && (
-                                <div className="p-8 text-center">
-                                  <p className="text-sm text-slate-400 font-medium">Nenhum cliente encontrado</p>
-                                </div>
-                              )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    {!clientSearch && !checkoutData.clientId && (
-                      <p className="text-[10px] text-blue-500 font-black uppercase mt-1 px-1 flex items-center gap-1">✓ Selecionado: Venda Rápida</p>
-                    )}
-                    {!clientSearch && checkoutData.clientId && (
-                      <p className="text-[10px] text-emerald-500 font-black uppercase mt-1 px-1 flex items-center gap-1">
-                        <CheckCircle2 size={10} /> Selecionado: {clients.find(c => c.id === checkoutData.clientId)?.name}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center h-4">Tipo Desconto</label>
-                      <select
-                        className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#0158ad]/20"
-                        value={checkoutData.discountType}
-                        onChange={(e) => setCheckoutData({ ...checkoutData, discountType: e.target.value })}
-                      >
-                        <option value="FIXED">Valor Fixo</option>
-                        <option value="PERCENTAGE">Porcentagem</option>
-                      </select>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center h-4">Valor Desconto</label>
-                      <input
-                        type="number"
-                        className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#0158ad]/20"
-                        placeholder="0,00"
-                        value={checkoutData.discountValue === 0 ? '' : checkoutData.discountValue}
-                        onChange={(e) => setCheckoutData({ ...checkoutData, discountValue: e.target.value === '' ? 0 : Number(e.target.value) })}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Row 2: Pagamento & Entrega + Frete */}
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 h-4">
-                      <CreditCard size={14} /> Forma de Pagamento
-                    </label>
-                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-                      {['CASH', 'CREDIT_CARD', 'DEBIT_CARD', 'PIX', 'A_COMBINAR'].map(method => (
-                        <button
-                          key={method}
-                          onClick={() => setCheckoutData({ ...checkoutData, paymentMethod: method })}
-                          className={`px-3 py-3 rounded-xl border font-bold text-[10px] transition-all flex items-center justify-center gap-2 ${checkoutData.paymentMethod === method
-                            ? method === 'A_COMBINAR'
-                              ? 'bg-orange-500 text-white border-orange-500 shadow-lg shadow-orange-500/20'
-                              : 'bg-[#0158ad] text-white border-[#0158ad] shadow-lg shadow-blue-500/20'
-                            : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
-                            }`}
-                        >
-                          {method === 'CASH' ? 'DINHEIRO' : method === 'CREDIT_CARD' ? 'CRÉDITO' : method === 'DEBIT_CARD' ? 'DÉBITO' : method === 'A_COMBINAR' ? 'PAGAR DEPOIS' : 'PIX'}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
+                <div className="bg-white rounded-[32px] border border-slate-200 shadow-sm overflow-hidden flex flex-col p-6 md:p-8 space-y-6 md:space-y-8 animate-in fade-in slide-in-from-right-4 duration-300 flex-1 md:flex-none overflow-y-auto md:overflow-visible pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 items-start">
+                    {/* Row 1: Cliente & Descontos */}
                     <div className="space-y-2">
                       <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 h-4">
-                        <Package size={14} className="text-slate-400" /> Tipo de Entrega
+                        <User size={14} /> Cliente
                       </label>
-                      <div className="grid grid-cols-2 gap-3">
-                        <button
-                          onClick={() => setCheckoutData({ ...checkoutData, deliveryMethod: 'PICKUP', deliveryFee: 0 })}
-                          className={`px-3 py-3 rounded-xl border font-bold text-[10px] transition-all ${checkoutData.deliveryMethod === 'PICKUP'
-                            ? 'bg-[#0158ad] text-white border-[#0158ad] shadow-lg shadow-blue-500/20'
-                            : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
-                            }`}
+                      <div className="relative group">
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                          <Search size={16} />
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="Buscar cliente..."
+                          className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+                          value={clientSearch}
+                          onChange={(e) => setClientSearch(e.target.value)}
+                        />
+                        {clientSearch.length > 0 && (
+                          <div className="absolute z-50 left-0 right-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                            <div className="max-h-[250px] overflow-y-auto custom-scrollbar">
+                              <button
+                                onClick={() => {
+                                  setCheckoutData({ ...checkoutData, clientId: '' });
+                                  setClientSearch('');
+                                }}
+                                className="w-full p-4 text-left hover:bg-slate-50 flex items-center justify-between border-b border-slate-50 transition-colors"
+                              >
+                                <div>
+                                  <p className="text-sm font-black text-[#0158ad]">Venda Rápida</p>
+                                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Consumidor Final</p>
+                                </div>
+                                {!checkoutData.clientId && <CheckCircle2 size={16} className="text-emerald-500" />}
+                              </button>
+
+                              {clients
+                                .filter(c =>
+                                  c.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
+                                  (c.cpf && c.cpf.includes(clientSearch))
+                                )
+                                .map(c => (
+                                  <button
+                                    key={c.id}
+                                    onClick={() => {
+                                      setCheckoutData({ ...checkoutData, clientId: c.id });
+                                      setClientSearch('');
+                                    }}
+                                    className="w-full p-4 text-left hover:bg-slate-50 flex items-center justify-between border-b border-slate-50 last:border-0 transition-colors"
+                                  >
+                                    <div>
+                                      <p className="text-sm font-black text-slate-700">{c.name}</p>
+                                      {c.cpf && <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">CPF: {c.cpf}</p>}
+                                    </div>
+                                    {checkoutData.clientId === c.id && <CheckCircle2 size={16} className="text-emerald-500" />}
+                                  </button>
+                                ))
+                              }
+
+                              {clients.filter(c =>
+                                c.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
+                                (c.cpf && c.cpf.includes(clientSearch))
+                              ).length === 0 && (
+                                  <div className="p-8 text-center">
+                                    <p className="text-sm text-slate-400 font-medium">Nenhum cliente encontrado</p>
+                                  </div>
+                                )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      {!clientSearch && !checkoutData.clientId && (
+                        <p className="text-[10px] text-blue-500 font-black uppercase mt-1 px-1 flex items-center gap-1">✓ Selecionado: Venda Rápida</p>
+                      )}
+                      {!clientSearch && checkoutData.clientId && (
+                        <p className="text-[10px] text-emerald-500 font-black uppercase mt-1 px-1 flex items-center gap-1">
+                          <CheckCircle2 size={10} /> Selecionado: {clients.find(c => c.id === checkoutData.clientId)?.name}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center h-4">Tipo Desconto</label>
+                        <select
+                          className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#0158ad]/20"
+                          value={checkoutData.discountType}
+                          onChange={(e) => setCheckoutData({ ...checkoutData, discountType: e.target.value })}
                         >
-                          RETIRADA
-                        </button>
-                        <button
-                          onClick={() => setCheckoutData({ ...checkoutData, deliveryMethod: 'DELIVERY' })}
-                          className={`px-3 py-3 rounded-xl border font-bold text-[10px] transition-all ${checkoutData.deliveryMethod === 'DELIVERY'
-                            ? 'bg-[#0158ad] text-white border-[#0158ad] shadow-lg shadow-blue-500/20'
-                            : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
-                            }`}
-                        >
-                          ENTREGA
-                        </button>
+                          <option value="FIXED">Valor Fixo</option>
+                          <option value="PERCENTAGE">Porcentagem</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center h-4">Valor Desconto</label>
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#0158ad]/20"
+                          placeholder="0,00"
+                          value={checkoutData.discountValue === 0 ? '' : checkoutData.discountValue}
+                          onChange={(e) => setCheckoutData({ ...checkoutData, discountValue: e.target.value === '' ? 0 : Number(e.target.value) })}
+                        />
                       </div>
                     </div>
+
+                    {/* Row 2: Pagamento & Entrega + Frete */}
                     <div className="space-y-2">
-                      <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center h-4">Frete (R$)</label>
-                      <input
-                        type="number"
-                        className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#0158ad]/20"
-                        placeholder="0,00"
-                        value={checkoutData.deliveryFee === 0 ? '' : checkoutData.deliveryFee}
-                        onChange={(e) => setCheckoutData({ ...checkoutData, deliveryFee: e.target.value === '' ? 0 : Number(e.target.value) })}
+                      <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 h-4">
+                        <CreditCard size={14} /> Forma de Pagamento
+                      </label>
+                      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                        {['CASH', 'CREDIT_CARD', 'DEBIT_CARD', 'PIX', 'A_COMBINAR'].map(method => (
+                          <button
+                            key={method}
+                            onClick={() => setCheckoutData({ ...checkoutData, paymentMethod: method })}
+                            className={`px-3 py-3 rounded-xl border font-bold text-[10px] transition-all flex items-center justify-center gap-2 ${checkoutData.paymentMethod === method
+                              ? method === 'A_COMBINAR'
+                                ? 'bg-orange-500 text-white border-orange-500 shadow-lg shadow-orange-500/20'
+                                : 'bg-[#0158ad] text-white border-[#0158ad] shadow-lg shadow-blue-500/20'
+                              : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
+                              }`}
+                          >
+                            {method === 'CASH' ? 'DINHEIRO' : method === 'CREDIT_CARD' ? 'CRÉDITO' : method === 'DEBIT_CARD' ? 'DÉBITO' : method === 'A_COMBINAR' ? 'PAGAR DEPOIS' : 'PIX'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 h-4">
+                          <Package size={14} className="text-slate-400" /> Tipo de Entrega
+                        </label>
+                        <div className="grid grid-cols-2 gap-3">
+                          <button
+                            onClick={() => setCheckoutData({ ...checkoutData, deliveryMethod: 'PICKUP', deliveryFee: 0 })}
+                            className={`px-3 py-3 rounded-xl border font-bold text-[10px] transition-all ${checkoutData.deliveryMethod === 'PICKUP'
+                              ? 'bg-[#0158ad] text-white border-[#0158ad] shadow-lg shadow-blue-500/20'
+                              : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
+                              }`}
+                          >
+                            RETIRADA
+                          </button>
+                          <button
+                            onClick={() => setCheckoutData({ ...checkoutData, deliveryMethod: 'DELIVERY' })}
+                            className={`px-3 py-3 rounded-xl border font-bold text-[10px] transition-all ${checkoutData.deliveryMethod === 'DELIVERY'
+                              ? 'bg-[#0158ad] text-white border-[#0158ad] shadow-lg shadow-blue-500/20'
+                              : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
+                              }`}
+                          >
+                            ENTREGA
+                          </button>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center h-4">Frete (R$)</label>
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#0158ad]/20"
+                          placeholder="0,00"
+                          value={checkoutData.deliveryFee === 0 ? '' : checkoutData.deliveryFee}
+                          onChange={(e) => setCheckoutData({ ...checkoutData, deliveryFee: e.target.value === '' ? 0 : Number(e.target.value) })}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Row 3: Notas */}
+                    <div className="space-y-2">
+                      <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center h-4">Notas</label>
+                      <textarea
+                        rows={2}
+                        className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#0158ad]/20"
+                        placeholder="..."
+                        value={checkoutData.orderNotes}
+                        onChange={(e) => setCheckoutData({ ...checkoutData, orderNotes: e.target.value })}
                       />
                     </div>
-                  </div>
 
-                  {/* Row 3: Notas */}
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center h-4">Notas</label>
-                    <textarea
-                      rows={2}
-                      className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#0158ad]/20"
-                      placeholder="..."
-                      value={checkoutData.orderNotes}
-                      onChange={(e) => setCheckoutData({ ...checkoutData, orderNotes: e.target.value })}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center h-4">Obs. Interna</label>
-                    <textarea
-                      rows={2}
-                      className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                      placeholder="..."
-                      value={checkoutData.observation}
-                      onChange={(e) => setCheckoutData({ ...checkoutData, observation: e.target.value })}
-                    />
+                    <div className="space-y-2">
+                      <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center h-4">Obs. Interna</label>
+                      <textarea
+                        rows={2}
+                        className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                        placeholder="..."
+                        value={checkoutData.observation}
+                        onChange={(e) => setCheckoutData({ ...checkoutData, observation: e.target.value })}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
             )}
           </div>
 
+
+          {/* Floating Bottom Bar — Mobile only, shown when cart has items and not in checkout */}
+          {!showCheckout && cart.length > 0 && (
+            <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 animate-in slide-in-from-bottom-4 duration-300 pb-[env(safe-area-inset-bottom)]">
+              <div className="bg-slate-900 mx-3 mb-6 rounded-[24px] px-5 py-4 shadow-2xl flex items-center justify-between gap-4">
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    {cart.reduce((acc, i) => acc + i.quantity, 0)} {cart.reduce((acc, i) => acc + i.quantity, 0) === 1 ? 'item' : 'itens'} selecionados
+                  </span>
+                  <span className="text-2xl font-black text-emerald-400 tracking-tight leading-tight">
+                    R$ {cartTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <button
+                  onClick={() => setShowCheckout(true)}
+                  className="shrink-0 px-6 py-3 bg-[#0158ad] text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-500/30 hover:bg-blue-700 active:scale-95 transition-all flex items-center gap-2"
+                >
+                  Continuar <ArrowLeft className="rotate-180" size={16} />
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Lado Direito: Carrinho e Finalização */}
-          <div className="lg:col-span-12 xl:col-span-4 flex flex-col h-auto md:sticky md:top-6 md:h-[calc(100vh-140px)]">
-            <div className={`bg-slate-900 md:rounded-[32px] p-6 md:p-8 flex flex-col flex-1 shadow-2xl text-white overflow-hidden ${cart.length === 0 ? 'rounded-[32px]' : 'rounded-t-[32px] md:rounded-l-[32px]'}`}>
+          <div className={`${showCheckout ? 'flex' : 'hidden md:flex'} lg:col-span-5 xl:col-span-4 flex-col h-auto md:sticky md:top-6 md:h-[calc(100vh-140px)]`}>
+            <div className={`bg-slate-900 md:rounded-[32px] p-6 pb-[calc(2rem+env(safe-area-inset-bottom))] md:pb-8 md:p-8 flex flex-col flex-1 shadow-2xl text-white overflow-hidden ${cart.length === 0 ? 'rounded-[32px]' : 'rounded-t-[32px] md:rounded-l-[32px]'}`}>
               <div className="flex items-center gap-3 mb-6 md:mb-8 shrink-0">
                 <div className="w-10 h-10 md:w-12 md:h-12 bg-white/10 rounded-2xl flex items-center justify-center shrink-0">
                   <ShoppingCart size={20} className="text-emerald-400" />
@@ -1234,6 +1277,7 @@ const Sales: React.FC = () => {
                   {isEditMode ? (
                     <input
                       type="number"
+                      inputMode="decimal"
                       className="w-full bg-white border border-slate-200 p-2 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                       value={editForm.deliveryFee === 0 ? '' : editForm.deliveryFee}
                       onChange={(e) => setEditForm({ ...editForm, deliveryFee: e.target.value === '' ? 0 : Number(e.target.value) })}

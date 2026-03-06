@@ -19,7 +19,9 @@ import {
   AlertCircle,
   ImageOff,
   GripVertical,
-  ChevronUp
+  ChevronUp,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 
 const ProductForm: React.FC = () => {
@@ -37,9 +39,9 @@ const ProductForm: React.FC = () => {
   const [newIsCombo, setNewIsCombo] = useState(false);
   const [newIsFractional, setNewIsFractional] = useState(false);
   const [newControlStock, setNewControlStock] = useState(true);
-  const [newAvailableQty, setNewAvailableQty] = useState('0');
-  const [newMinStockQty, setNewMinStockQty] = useState('0');
-  const [newCatalogMinStock, setNewCatalogMinStock] = useState('0');
+  const [newAvailableQty, setNewAvailableQty] = useState('');
+  const [newMinStockQty, setNewMinStockQty] = useState('');
+  const [newCatalogMinStock, setNewCatalogMinStock] = useState('');
   const [newReceiptMessage, setNewReceiptMessage] = useState('');
   const [newSupplier, setNewSupplier] = useState('');
   const [selectedSupplier, setSelectedSupplier] = useState('');
@@ -58,6 +60,7 @@ const ProductForm: React.FC = () => {
   const [newPromotionalPrice, setNewPromotionalPrice] = useState('');
   const [newPromotionalProfitAmount, setNewPromotionalProfitAmount] = useState('0');
   const [newPromotionalMargin, setNewPromotionalMargin] = useState('0');
+  const [newPromotionalMarkup, setNewPromotionalMarkup] = useState('0x');
   const [newShowInCatalog, setNewShowInCatalog] = useState(true);
   const [newIsActive, setNewIsActive] = useState(true);
   const [images, setImages] = useState<string[]>([]);
@@ -80,6 +83,7 @@ const ProductForm: React.FC = () => {
   const [showSecondaryInput, setShowSecondaryInput] = useState(false);
   const [generatedVariations, setGeneratedVariations] = useState<any[]>([]);
   const [expandedVariation, setExpandedVariation] = useState<string | null>(null);
+  const [generationError, setGenerationError] = useState('');
 
   // Unsaved changes state
   const [isDirty, setIsDirty] = useState(false);
@@ -129,6 +133,13 @@ const ProductForm: React.FC = () => {
   };
 
   const handleGenerateVariations = () => {
+    if ((variationType === 'Variação simples' && primaryInput.trim() !== '') ||
+      (variationType === 'Variação dupla' && (primaryInput.trim() !== '' || secondaryInput.trim() !== ''))) {
+      setGenerationError('Atenção: Clique em "Adicionar" para incluir o texto que você digitou na caixa antes de gerar.');
+      return;
+    }
+    setGenerationError('');
+
     let variants: any[] = [];
 
     if (variationType === 'Variação simples' && primaryOptions.length > 0) {
@@ -140,7 +151,7 @@ const ProductForm: React.FC = () => {
         costPrice: '',
         sku: '',
         barcode: '',
-        stock: '0',
+        stock: '',
         minStock: '0',
         weight: '0',
         height: '0',
@@ -160,7 +171,7 @@ const ProductForm: React.FC = () => {
             costPrice: '',
             sku: '',
             barcode: '',
-            stock: '0',
+            stock: '',
             minStock: '0',
             weight: '0',
             height: '0',
@@ -298,9 +309,9 @@ const ProductForm: React.FC = () => {
           setNewIsCombo(!!product.isCombo);
           setNewIsFractional(!!product.isFractional);
           setNewControlStock(!!product.controlStock);
-          setNewAvailableQty(String(product.availableQty || 0));
-          setNewMinStockQty(String(product.minStockQty || 0));
-          setNewCatalogMinStock(String(product.catalogMinStock || 0));
+          setNewAvailableQty(product.availableQty === 0 ? '' : String(product.availableQty));
+          setNewMinStockQty(product.minStockQty === 0 ? '' : String(product.minStockQty));
+          setNewCatalogMinStock(product.catalogMinStock === 0 ? '' : String(product.catalogMinStock));
           setNewReceiptMessage(product.receiptMessage || '');
           setNewSupplier(product.supplier || '');
           setNewCost(String(product.cost || 0));
@@ -361,7 +372,7 @@ const ProductForm: React.FC = () => {
                 secondaryValue: v.size,
                 price: '', // Backend não suporta preço por variação ainda
                 sku: '',   // Backend não suporta SKU por variação ainda
-                stock: String(v.quantity || 0),
+                stock: v.quantity === 0 ? '' : String(v.quantity),
                 minStock: '0',
                 images: v.images || []
               })));
@@ -381,7 +392,7 @@ const ProductForm: React.FC = () => {
                 primaryValue: hasColor ? v.color : v.size,
                 price: '',
                 sku: '',
-                stock: String(v.quantity || 0),
+                stock: v.quantity === 0 ? '' : String(v.quantity),
                 minStock: '0',
                 images: v.images || []
               })));
@@ -402,11 +413,11 @@ const ProductForm: React.FC = () => {
 
     // Cálculos Normais
     const amount = p - c;
-    const markup = c > 0 ? (amount / c) * 100 : 0;
+    const markupMultiplier = c > 0 ? (p / c) : (p > 0 ? 1 : 0);
     const marginReal = p > 0 ? (amount / p) * 100 : 0;
 
     setNewProfitAmount(amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-    setNewProfitPercent(markup.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    setNewProfitPercent(markupMultiplier.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + 'x');
     setNewRealMargin(marginReal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 
     // Cálculos Promocionais
@@ -414,11 +425,15 @@ const ProductForm: React.FC = () => {
       const pp = parseFloat(promoPrice) || 0;
       const promoAmount = pp - c;
       const promoMargin = pp > 0 ? (promoAmount / pp) * 100 : 0;
+      const promoMarkupMultiplier = c > 0 ? (pp / c) : (pp > 0 ? 1 : 0);
+
       setNewPromotionalProfitAmount(promoAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
       setNewPromotionalMargin(promoMargin.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+      setNewPromotionalMarkup(promoMarkupMultiplier.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + 'x');
     } else {
       setNewPromotionalProfitAmount('0');
       setNewPromotionalMargin('0');
+      setNewPromotionalMarkup('0x');
     }
   };
 
@@ -430,10 +445,11 @@ const ProductForm: React.FC = () => {
   const handleDiscountChange = (val: string) => {
     setNewPromotionalDiscount(val);
     const p = parseFloat(newPrice) || 0;
-    const d = parseFloat(val) || 0;
-    if (p > 0 && d >= 0 && d <= 100) {
+    const d = parseFloat(val);
+    if (p > 0 && !isNaN(d) && d >= 0 && d <= 100) {
       const newPromo = p - (p * (d / 100));
-      setNewPromotionalPrice(newPromo.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+      // Evita zero decimal à toa para facilitar digitação
+      setNewPromotionalPrice(Number.isInteger(newPromo) ? newPromo.toString() : newPromo.toFixed(2));
     } else if (val === '') {
       setNewPromotionalPrice('');
     }
@@ -443,10 +459,11 @@ const ProductForm: React.FC = () => {
   const handlePromoPriceChange = (val: string) => {
     setNewPromotionalPrice(val);
     const p = parseFloat(newPrice) || 0;
-    const pp = parseFloat(val) || 0;
-    if (p > 0 && pp >= 0) {
+    const pp = parseFloat(val);
+    if (p > 0 && !isNaN(pp) && pp >= 0) {
       const d = ((p - pp) / p) * 100;
-      setNewPromotionalDiscount(d.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+      // Evita zero decimal à toa para facilitar digitação
+      setNewPromotionalDiscount(Number.isInteger(d) ? d.toString() : d.toFixed(2));
     } else if (val === '') {
       setNewPromotionalDiscount('');
     }
@@ -460,7 +477,7 @@ const ProductForm: React.FC = () => {
       const d = parseFloat(newPromotionalDiscount) || 0;
       if (p > 0 && d >= 0) {
         const newPromo = p - (p * (d / 100));
-        setNewPromotionalPrice(newPromo.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+        setNewPromotionalPrice(Number.isInteger(newPromo) ? newPromo.toString() : newPromo.toFixed(2));
       }
     }
   }, [newPrice]);
@@ -570,7 +587,16 @@ const ProductForm: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in duration-500">
+    <div
+      className="flex flex-col gap-6 animate-in fade-in duration-500"
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' && e.target instanceof HTMLInputElement) {
+          if (!e.defaultPrevented) {
+            e.target.blur();
+          }
+        }
+      }}
+    >
       {/* Breadcrumbs */}
       <div className="flex items-center gap-2 text-[10px] md:text-[11px] text-slate-400 overflow-x-auto whitespace-nowrap pb-2 md:pb-0">
         <button onClick={() => handleSafeNavigate('/inventory')} className="hover:text-blue-600 transition-colors">Produtos</button>
@@ -783,6 +809,7 @@ const ProductForm: React.FC = () => {
                       <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">R$</span>
                       <input
                         type="number"
+                        inputMode="decimal"
                         step="0.01"
                         placeholder="0,00"
                         className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-black text-lg text-slate-700"
@@ -801,6 +828,7 @@ const ProductForm: React.FC = () => {
                       <input
                         required
                         type="number"
+                        inputMode="decimal"
                         step="0.01"
                         placeholder="0,00"
                         className="w-full pl-10 pr-4 py-2.5 bg-white border border-blue-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-black text-lg text-[#0158ad] shadow-sm"
@@ -820,6 +848,7 @@ const ProductForm: React.FC = () => {
                         <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-amber-500/50 font-bold text-sm">%</span>
                         <input
                           type="number"
+                          inputMode="decimal"
                           step="0.01"
                           placeholder="Ex: 10"
                           className="w-full pl-10 pr-4 py-2.5 bg-white border border-amber-200 rounded-xl focus:ring-4 focus:ring-amber-500/20 focus:border-amber-500 transition-all font-black text-lg text-amber-600 shadow-sm"
@@ -834,6 +863,7 @@ const ProductForm: React.FC = () => {
                         <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-emerald-500/50 font-bold text-sm">R$</span>
                         <input
                           type="number"
+                          inputMode="decimal"
                           step="0.01"
                           placeholder="0,00"
                           className="w-full pl-10 pr-4 py-2.5 bg-white border border-emerald-200 rounded-xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-black text-lg text-emerald-600 shadow-sm"
@@ -845,28 +875,28 @@ const ProductForm: React.FC = () => {
                   </div>
                 )}
 
-                <div className="grid grid-cols-3 gap-3 mt-auto pt-4 relative">
-                  <div className={`p-3 bg-white rounded-2xl border ${newIsPromotionalPrice ? 'border-amber-100 shadow-amber-50' : 'border-blue-50 shadow-sm'} text-center transition-all`}>
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{newIsPromotionalPrice ? 'Markup (Promo)' : 'Markup'}</p>
-                    <p className={`text-lg font-black ${parseFloat(newIsPromotionalPrice && newPromotionalPrice ? newPromotionalMargin /* simplificando, exibimos margin */ : newProfitPercent) < 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
-                      {newIsPromotionalPrice && newPromotionalPrice ? newPromotionalMargin : newProfitPercent}%
+                <div className="grid grid-cols-3 gap-1.5 md:gap-3 mt-auto pt-4 relative">
+                  <div className={`p-1.5 md:p-3 bg-white rounded-xl md:rounded-2xl border ${newIsPromotionalPrice ? 'border-amber-100 shadow-amber-50' : 'border-blue-50 shadow-sm'} text-center transition-all overflow-hidden flex flex-col justify-center`}>
+                    <p className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-tighter sm:tracking-widest mb-0.5 truncate">{newIsPromotionalPrice ? 'Markup (Promo)' : 'Markup'}</p>
+                    <p className={`text-xs sm:text-sm md:text-lg font-black truncate ${parseFloat(newIsPromotionalPrice && newPromotionalPrice ? newPromotionalMarkup : newProfitPercent) < 0 ? 'text-rose-500' : 'text-emerald-500'}`} title={newIsPromotionalPrice && newPromotionalPrice ? newPromotionalMarkup : newProfitPercent}>
+                      {newIsPromotionalPrice && newPromotionalPrice ? newPromotionalMarkup : newProfitPercent}
                     </p>
-                    <p className="text-[11px] text-slate-400 font-medium leading-tight mt-1">{newIsPromotionalPrice ? <s className="text-slate-400">{newProfitPercent}%</s> : 'Markup'}</p>
+                    <p className="text-[8px] md:text-[11px] text-slate-400 font-medium leading-tight mt-1 truncate">{newIsPromotionalPrice ? <s className="text-slate-400">{newProfitPercent}</s> : 'Multiplicador'}</p>
                   </div>
-                  <div className={`p-3 bg-white rounded-2xl border ${newIsPromotionalPrice ? 'border-amber-100 shadow-amber-50' : 'border-blue-50 shadow-sm'} text-center transition-all`}>
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{newIsPromotionalPrice ? 'Margem (Promo)' : 'Margem (%)'}</p>
-                    <p className={`text-lg font-black ${parseFloat(newIsPromotionalPrice && newPromotionalPrice ? newPromotionalMargin : newRealMargin) < 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                  <div className={`p-1.5 md:p-3 bg-white rounded-xl md:rounded-2xl border ${newIsPromotionalPrice ? 'border-amber-100 shadow-amber-50' : 'border-blue-50 shadow-sm'} text-center transition-all overflow-hidden flex flex-col justify-center`}>
+                    <p className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-tighter sm:tracking-widest mb-0.5 truncate">{newIsPromotionalPrice ? 'Margem (Promo)' : 'Margem (%)'}</p>
+                    <p className={`text-xs sm:text-sm md:text-lg font-black truncate ${parseFloat(newIsPromotionalPrice && newPromotionalPrice ? newPromotionalMargin : newRealMargin) < 0 ? 'text-rose-500' : 'text-emerald-500'}`} title={`${newIsPromotionalPrice && newPromotionalPrice ? newPromotionalMargin : newRealMargin}%`}>
                       {newIsPromotionalPrice && newPromotionalPrice ? newPromotionalMargin : newRealMargin}%
                     </p>
-                    <p className="text-[11px] text-slate-400 font-medium leading-tight mt-1">{newIsPromotionalPrice ? <s className="text-slate-400">{newRealMargin}%</s> : 'Margem real'}</p>
+                    <p className="text-[8px] md:text-[11px] text-slate-400 font-medium leading-tight mt-1 truncate">{newIsPromotionalPrice ? <s className="text-slate-400">{newRealMargin}%</s> : 'Margem real'}</p>
                   </div>
-                  <div className={`p-3 bg-white rounded-2xl border ${newIsPromotionalPrice ? 'border-amber-100 shadow-amber-50' : 'border-blue-50 shadow-sm'} text-center transition-all`}>
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{newIsPromotionalPrice ? 'Lucro (Promo)' : 'Lucro Líquido'}</p>
-                    <p className={`text-lg font-black ${parseFloat(newIsPromotionalPrice && newPromotionalPrice ? newPromotionalProfitAmount : newProfitAmount) < 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                  <div className={`p-1.5 md:p-3 bg-white rounded-xl md:rounded-2xl border ${newIsPromotionalPrice ? 'border-amber-100 shadow-amber-50' : 'border-blue-50 shadow-sm'} text-center transition-all overflow-hidden flex flex-col justify-center`}>
+                    <p className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-tighter sm:tracking-widest mb-0.5 truncate">{newIsPromotionalPrice ? 'Lucro (Promo)' : 'Lucro Líquido'}</p>
+                    <p className={`text-xs sm:text-sm md:text-lg font-black truncate ${parseFloat(newIsPromotionalPrice && newPromotionalPrice ? newPromotionalProfitAmount : newProfitAmount) < 0 ? 'text-rose-500' : 'text-emerald-500'}`} title={`R$ ${newIsPromotionalPrice && newPromotionalPrice ? newPromotionalProfitAmount : newProfitAmount}`}>
                       R$ {newIsPromotionalPrice && newPromotionalPrice ? newPromotionalProfitAmount : newProfitAmount}
                     </p>
                     {newIsPromotionalPrice && (
-                      <p className="text-[11px] text-slate-400 font-medium leading-tight mt-1"><s className="text-slate-400">R$ {newProfitAmount}</s></p>
+                      <p className="text-[8px] md:text-[11px] text-slate-400 font-medium leading-tight mt-1 truncate"><s className="text-slate-400">R$ {newProfitAmount}</s></p>
                     )}
                   </div>
                 </div>
@@ -930,7 +960,7 @@ const ProductForm: React.FC = () => {
                   </select>
                   <button
                     type="button"
-                    onClick={() => navigate('/brands')}
+                    onClick={() => handleSafeNavigate('/brands')}
                     className="w-12 h-12 bg-transparent border border-slate-200 text-slate-400 hover:text-blue-500 hover:border-blue-500 rounded-xl flex items-center justify-center transition-all font-black text-lg"
                   >
                     +
@@ -960,7 +990,7 @@ const ProductForm: React.FC = () => {
                   </select>
                   <button
                     type="button"
-                    onClick={() => navigate('/categories')}
+                    onClick={() => handleSafeNavigate('/categories')}
                     className="w-12 h-12 bg-transparent border border-slate-200 text-slate-400 hover:text-blue-500 hover:border-blue-500 rounded-xl flex items-center justify-center transition-all font-black text-lg"
                   >
                     +
@@ -1051,10 +1081,10 @@ const ProductForm: React.FC = () => {
                   </div>
 
                   <div className="flex-1 w-full md:px-4">
-                    <div className="flex flex-col md:flex-row gap-4 items-start md:items-center mb-4">
+                    <div className="flex flex-col md:flex-row gap-4 items-start mb-4">
                       <div className="flex-1 w-full md:max-w-[180px]">
                         <select
-                          className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-bold text-slate-600 text-xs appearance-none cursor-pointer"
+                          className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-bold text-slate-600 text-xs appearance-none cursor-pointer"
                           value={primaryChar}
                           onChange={(e) => {
                             setPrimaryChar(e.target.value);
@@ -1064,42 +1094,50 @@ const ProductForm: React.FC = () => {
                           <option value="">Selecionar</option>
                           <option value="Cor">Cor</option>
                           <option value="Tamanho">Tamanho</option>
-                          <option value="Voltagem">Voltagem</option>
                         </select>
                       </div>
 
                       {showPrimaryInput && primaryChar && (
-                        <div className="flex-1 w-full md:w-auto flex gap-2 animate-in slide-in-from-left-2 duration-300">
-                          <input
-                            type="text"
-                            placeholder={`Nome da ${primaryChar}...`}
-                            className="flex-1 px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 focus:border-blue-400 outline-none"
-                            value={primaryInput}
-                            onChange={(e) => setPrimaryInput(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
+                        <div className="flex-1 w-full md:w-auto flex flex-col gap-2 animate-in slide-in-from-left-2 duration-300">
+                          <div className="flex w-full gap-2">
+                            <input
+                              type="text"
+                              placeholder={`Nome da ${primaryChar}...`}
+                              className="flex-1 px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 focus:border-blue-400 outline-none"
+                              value={primaryInput}
+                              onChange={(e) => setPrimaryInput(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  if (primaryInput.trim()) {
+                                    const newOpts = primaryInput.split(',').map(o => o.trim()).filter(o => o !== '');
+                                    setPrimaryOptions([...primaryOptions, ...newOpts]);
+                                    setPrimaryInput('');
+                                    setGenerationError('');
+                                  }
+                                }
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
                                 if (primaryInput.trim()) {
                                   const newOpts = primaryInput.split(',').map(o => o.trim()).filter(o => o !== '');
                                   setPrimaryOptions([...primaryOptions, ...newOpts]);
                                   setPrimaryInput('');
+                                  setGenerationError('');
                                 }
-                              }
-                            }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (primaryInput.trim()) {
-                                const newOpts = primaryInput.split(',').map(o => o.trim()).filter(o => o !== '');
-                                setPrimaryOptions([...primaryOptions, ...newOpts]);
-                                setPrimaryInput('');
-                              }
-                            }}
-                            className="px-3 py-2 bg-blue-500 text-white rounded-xl text-[10px] font-black hover:bg-blue-600 transition-all"
-                          >
-                            Adicionar
-                          </button>
+                              }}
+                              className="px-3 py-2 bg-blue-500 text-white rounded-xl text-[10px] font-black hover:bg-blue-600 transition-all"
+                            >
+                              Adicionar
+                            </button>
+                          </div>
+                          {(primaryChar === 'Cor' || primaryChar === 'Tamanho') && (
+                            <p className="text-[10px] text-slate-500 font-medium pl-1">
+                              {primaryChar === 'Cor' ? 'Ex: Branco, Preto, Azul (separe por vírgula para adicionar em massa)' : 'Ex: P, M, G, GG ou 38, 40 (separe por vírgula para adicionar em massa)'}
+                            </p>
+                          )}
                         </div>
                       )}
                     </div>
@@ -1130,10 +1168,10 @@ const ProductForm: React.FC = () => {
                     </div>
 
                     <div className="flex-1 w-full md:px-4">
-                      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center mb-4">
+                      <div className="flex flex-col md:flex-row gap-4 items-start mb-4">
                         <div className="flex-1 w-full md:max-w-[180px]">
                           <select
-                            className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-bold text-slate-600 text-xs appearance-none cursor-pointer"
+                            className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-bold text-slate-600 text-xs appearance-none cursor-pointer"
                             value={secondaryChar}
                             onChange={(e) => {
                               setSecondaryChar(e.target.value);
@@ -1148,37 +1186,46 @@ const ProductForm: React.FC = () => {
                         </div>
 
                         {showSecondaryInput && secondaryChar && (
-                          <div className="flex-1 w-full md:w-auto flex gap-2 animate-in slide-in-from-left-2 duration-300">
-                            <input
-                              type="text"
-                              placeholder={`Nome da ${secondaryChar}...`}
-                              className="flex-1 px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 focus:border-blue-400 outline-none"
-                              value={secondaryInput}
-                              onChange={(e) => setSecondaryInput(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault();
+                          <div className="flex-1 w-full md:w-auto flex flex-col gap-2 animate-in slide-in-from-left-2 duration-300">
+                            <div className="flex w-full gap-2">
+                              <input
+                                type="text"
+                                placeholder={`Nome da ${secondaryChar}...`}
+                                className="flex-1 px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 focus:border-blue-400 outline-none"
+                                value={secondaryInput}
+                                onChange={(e) => setSecondaryInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    if (secondaryInput.trim()) {
+                                      const newOpts = secondaryInput.split(',').map(o => o.trim()).filter(o => o !== '');
+                                      setSecondaryOptions([...secondaryOptions, ...newOpts]);
+                                      setSecondaryInput('');
+                                      setGenerationError('');
+                                    }
+                                  }
+                                }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
                                   if (secondaryInput.trim()) {
                                     const newOpts = secondaryInput.split(',').map(o => o.trim()).filter(o => o !== '');
                                     setSecondaryOptions([...secondaryOptions, ...newOpts]);
                                     setSecondaryInput('');
+                                    setGenerationError('');
                                   }
-                                }
-                              }}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (secondaryInput.trim()) {
-                                  const newOpts = secondaryInput.split(',').map(o => o.trim()).filter(o => o !== '');
-                                  setSecondaryOptions([...secondaryOptions, ...newOpts]);
-                                  setSecondaryInput('');
-                                }
-                              }}
-                              className="px-3 py-2 bg-purple-500 text-white rounded-xl text-[10px] font-black hover:bg-purple-600 transition-all"
-                            >
-                              Adicionar
-                            </button>
+                                }}
+                                className="px-3 py-2 bg-purple-500 text-white rounded-xl text-[10px] font-black hover:bg-purple-600 transition-all"
+                              >
+                                Adicionar
+                              </button>
+                            </div>
+                            {(secondaryChar === 'Cor' || secondaryChar === 'Tamanho') && (
+                              <p className="text-[10px] text-slate-500 font-medium pl-1">
+                                {secondaryChar === 'Cor' ? 'Ex: Branco, Preto, Azul (separe por vírgula para adicionar em massa)' : 'Ex: P, M, G, GG ou 38, 40 (separe por vírgula para adicionar em massa)'}
+                              </p>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1217,13 +1264,27 @@ const ProductForm: React.FC = () => {
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={handleGenerateVariations}
-                    className="w-full md:w-auto px-10 py-3 bg-[#0158ad] text-white rounded-xl font-black text-xs hover:bg-blue-800 transition-all shadow-md shadow-blue-50 border border-blue-600/20"
-                  >
-                    Gerar variações
-                  </button>
+                  <div className="flex flex-col md:items-end gap-2 w-full md:w-auto relative">
+                    {/* Error Tooltip */}
+                    {generationError && (
+                      <div className="absolute bottom-full mb-2 right-0 bg-rose-50 border border-rose-200 text-rose-600 px-4 py-3 rounded-xl shadow-lg shadow-rose-500/10 text-[11px] font-bold w-full md:w-[280px] animate-in slide-in-from-bottom-2 fade-in z-20">
+                        <div className="flex gap-2 items-start">
+                          <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                          <p>{generationError}</p>
+                        </div>
+                        {/* Triangle pointer */}
+                        <div className="absolute top-full right-8 border-[6px] border-transparent border-t-rose-200"></div>
+                        <div className="absolute top-full right-8 border-[6px] border-transparent border-t-rose-50 translate-y-[-1px]"></div>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleGenerateVariations}
+                      className="w-full md:w-auto px-10 py-3 bg-[#0158ad] text-white rounded-xl font-black text-xs hover:bg-blue-800 transition-all shadow-md shadow-blue-50 border border-blue-600/20"
+                    >
+                      Gerar variações
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -1232,19 +1293,20 @@ const ProductForm: React.FC = () => {
             {/* LISTA DE VARIAÇÕES GERADAS */}
             {generatedVariations.length > 0 && (
               <div className="mt-12 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                  <div>
+                <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 pb-4 gap-4">
+                  <div className="text-center md:text-left">
                     <h4 className="text-sm font-black text-slate-700">Variações geradas ({generatedVariations.length})</h4>
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">{primaryChar}{secondaryChar ? `, ${secondaryChar}` : ''}</p>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <button type="button" className="text-[10px] font-black text-blue-500 uppercase tracking-widest flex items-center gap-1 hover:text-blue-700">
+                  <div className="flex items-center justify-center gap-3 w-full md:w-auto bg-white border border-slate-200 shadow-sm rounded-xl px-4 py-2.5">
+                    <button type="button" className="text-[10px] font-black text-blue-500 uppercase tracking-widest flex items-center gap-1 hover:text-blue-700 whitespace-nowrap">
                       Atualização em lote <Info size={12} />
                     </button>
+                    <div className="w-px h-3.5 bg-slate-200 mx-1"></div>
                     <button
                       type="button"
                       onClick={() => setExpandedVariation(expandedVariation === null ? -1 : null)}
-                      className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1 hover:text-slate-600"
+                      className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1 hover:text-slate-700 whitespace-nowrap"
                     >
                       {expandedVariation === -1 ? 'Recolher todos' : 'Expandir todos'} <ChevronDown size={14} className={expandedVariation === -1 ? 'rotate-180' : ''} />
                     </button>
@@ -1287,6 +1349,45 @@ const ProductForm: React.FC = () => {
                             </span>
                           </div>
                           <div className="flex items-center gap-3">
+                            <div className="flex items-center bg-slate-100/50 rounded-lg p-0.5 border border-slate-200/50">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (idx > 0) {
+                                    const newVariations = [...generatedVariations];
+                                    const temp = newVariations[idx - 1];
+                                    newVariations[idx - 1] = newVariations[idx];
+                                    newVariations[idx] = temp;
+                                    setGeneratedVariations(newVariations);
+                                    setIsDirty(true);
+                                  }
+                                }}
+                                disabled={idx === 0}
+                                className="p-1 text-slate-400 hover:text-blue-600 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors"
+                              >
+                                <ArrowUp size={16} />
+                              </button>
+                              <div className="w-px h-3 bg-slate-200"></div>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (idx < generatedVariations.length - 1) {
+                                    const newVariations = [...generatedVariations];
+                                    const temp = newVariations[idx + 1];
+                                    newVariations[idx + 1] = newVariations[idx];
+                                    newVariations[idx] = temp;
+                                    setGeneratedVariations(newVariations);
+                                    setIsDirty(true);
+                                  }
+                                }}
+                                disabled={idx === generatedVariations.length - 1}
+                                className="p-1 text-slate-400 hover:text-blue-600 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors"
+                              >
+                                <ArrowDown size={16} />
+                              </button>
+                            </div>
                             <button
                               type="button"
                               onClick={(e) => {
@@ -1350,6 +1451,7 @@ const ProductForm: React.FC = () => {
                                 <div className="flex">
                                   <input
                                     type="number"
+                                    inputMode="numeric"
                                     placeholder="0"
                                     className="flex-1 px-4 py-2 bg-white border border-slate-200 rounded-l-lg text-xs font-bold text-slate-700 border-r-0"
                                     value={v.stock || ''}
@@ -1412,6 +1514,7 @@ const ProductForm: React.FC = () => {
                                   <div className="flex">
                                     <input
                                       type="number"
+                                      inputMode="numeric"
                                       placeholder="0"
                                       className="flex-1 px-4 py-2 bg-white border border-slate-200 rounded-l-lg text-xs font-bold text-slate-700 border-r-0"
                                       value={v.stock || ''}
@@ -1446,7 +1549,7 @@ const ProductForm: React.FC = () => {
                                 <div className="space-y-1.5">
                                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Estoque mínimo</label>
                                   <div className="flex">
-                                    <input type="number" placeholder="0" className="flex-1 px-4 py-2 bg-white border border-slate-200 rounded-l-lg text-xs font-bold text-slate-700 border-r-0" />
+                                    <input type="number" inputMode="numeric" placeholder="0" className="flex-1 px-4 py-2 bg-white border border-slate-200 rounded-l-lg text-xs font-bold text-slate-700 border-r-0" />
                                     <div className="px-3 bg-slate-50 border border-slate-200 rounded-r-lg flex items-center text-[9px] font-black text-slate-400 uppercase">UN</div>
                                   </div>
                                 </div>
@@ -1457,28 +1560,28 @@ const ProductForm: React.FC = () => {
                                 <div className="space-y-1.5">
                                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Peso</label>
                                   <div className="flex">
-                                    <input type="number" placeholder="0" className="flex-1 px-4 py-2 bg-white border border-slate-200 rounded-l-lg text-xs font-bold text-slate-700 border-r-0" />
+                                    <input type="number" inputMode="numeric" placeholder="0" className="flex-1 px-4 py-2 bg-white border border-slate-200 rounded-l-lg text-xs font-bold text-slate-700 border-r-0" />
                                     <div className="px-3 bg-slate-50 border border-slate-200 rounded-r-lg flex items-center text-[9px] font-black text-slate-400 uppercase">GR</div>
                                   </div>
                                 </div>
                                 <div className="space-y-1.5">
                                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Altura</label>
                                   <div className="flex">
-                                    <input type="number" placeholder="0" className="flex-1 px-4 py-2 bg-white border border-slate-200 rounded-l-lg text-xs font-bold text-slate-700 border-r-0" />
+                                    <input type="number" inputMode="numeric" placeholder="0" className="flex-1 px-4 py-2 bg-white border border-slate-200 rounded-l-lg text-xs font-bold text-slate-700 border-r-0" />
                                     <div className="px-3 bg-slate-50 border border-slate-200 rounded-r-lg flex items-center text-[9px] font-black text-slate-400 uppercase">CM</div>
                                   </div>
                                 </div>
                                 <div className="space-y-1.5">
                                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Largura</label>
                                   <div className="flex">
-                                    <input type="number" placeholder="0" className="flex-1 px-4 py-2 bg-white border border-slate-200 rounded-l-lg text-xs font-bold text-slate-700 border-r-0" />
+                                    <input type="number" inputMode="numeric" placeholder="0" className="flex-1 px-4 py-2 bg-white border border-slate-200 rounded-l-lg text-xs font-bold text-slate-700 border-r-0" />
                                     <div className="px-3 bg-slate-50 border border-slate-200 rounded-r-lg flex items-center text-[9px] font-black text-slate-400 uppercase">CM</div>
                                   </div>
                                 </div>
                                 <div className="space-y-1.5">
                                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Comprimento</label>
                                   <div className="flex">
-                                    <input type="number" placeholder="0" className="flex-1 px-4 py-2 bg-white border border-slate-200 rounded-l-lg text-xs font-bold text-slate-700 border-r-0" />
+                                    <input type="number" inputMode="numeric" placeholder="0" className="flex-1 px-4 py-2 bg-white border border-slate-200 rounded-l-lg text-xs font-bold text-slate-700 border-r-0" />
                                     <div className="px-3 bg-slate-50 border border-slate-200 rounded-r-lg flex items-center text-[9px] font-black text-slate-400 uppercase">CM</div>
                                   </div>
                                 </div>

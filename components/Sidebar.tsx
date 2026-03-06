@@ -91,7 +91,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout, isOpen = false, onClose }) 
           </button>
         </div>
 
-        <nav className="flex-1 px-3 py-2 space-y-0.5">
+        <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto custom-scrollbar">
           {navItems.map((item) => {
             if (item.isSubmenu) {
               return (

@@ -195,6 +195,7 @@ model ProductVariation {
   quantity         Int               @default(0)
   images           String[]          @default([]) // Imagens da variação
   active           Boolean           @default(true) // Soft Delete e.g. "Descontinuado"
+  order            Int               @default(0)
   lastSaleDate     DateTime?
   lastEntryDate    DateTime          @default(now())
   saleItems        SaleItem[]

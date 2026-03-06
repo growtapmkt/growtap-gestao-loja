@@ -35,14 +35,14 @@ const Settings: React.FC = () => {
       if (data.success && data.settings) {
         // Garantir defaults para cores se vierem nulos
         const loadedSettings = {
-           ...data.settings,
-           catalogPrimaryColor: data.settings.catalogPrimaryColor || '#0158ad',
-           catalogSecondaryColor: data.settings.catalogSecondaryColor || '#1e293b',
-           catalogBackgroundColor: data.settings.catalogBackgroundColor || '#f8fafc',
-           catalogCardColor: data.settings.catalogCardColor || '#ffffff',
-           catalogTextColor: data.settings.catalogTextColor || '#1e293b',
-           catalogPriceColor: data.settings.catalogPriceColor || '#0158ad',
-           catalogCardRadius: data.settings.catalogCardRadius ?? 16
+          ...data.settings,
+          catalogPrimaryColor: data.settings.catalogPrimaryColor || '#0158ad',
+          catalogSecondaryColor: data.settings.catalogSecondaryColor || '#1e293b',
+          catalogBackgroundColor: data.settings.catalogBackgroundColor || '#f8fafc',
+          catalogCardColor: data.settings.catalogCardColor || '#ffffff',
+          catalogTextColor: data.settings.catalogTextColor || '#1e293b',
+          catalogPriceColor: data.settings.catalogPriceColor || '#0158ad',
+          catalogCardRadius: data.settings.catalogCardRadius ?? 16
         };
         setSettings(loadedSettings);
       }
@@ -171,8 +171,8 @@ const Settings: React.FC = () => {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex-none lg:w-full flex items-center gap-2 lg:gap-3 px-3 py-2 lg:px-4 lg:py-3 text-sm font-bold transition-all rounded-lg mb-0 lg:mb-1 whitespace-nowrap ${activeTab === tab.id
-                    ? 'bg-blue-50 text-blue-600 shadow-sm ring-1 ring-blue-100 lg:ring-0'
-                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+                  ? 'bg-blue-50 text-blue-600 shadow-sm ring-1 ring-blue-100 lg:ring-0'
+                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
                   }`}
               >
                 <tab.icon size={18} className={activeTab === tab.id ? 'text-blue-600' : 'text-slate-400'} />
@@ -353,6 +353,7 @@ const Settings: React.FC = () => {
                     <label className="text-xs font-bold text-slate-500 uppercase">Percentual Máximo de Desconto (%)</label>
                     <input
                       type="number"
+                      inputMode="decimal"
                       className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-100 outline-none"
                       value={settings.maxDiscountPercent || ''}
                       onChange={e => handleChange('maxDiscountPercent', parseFloat(e.target.value))}
@@ -373,6 +374,7 @@ const Settings: React.FC = () => {
                     <label className="text-xs font-bold text-slate-500 uppercase">Taxa Padrão Cartão (%)</label>
                     <input
                       type="number"
+                      inputMode="decimal"
                       step="0.01"
                       className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-100 outline-none"
                       value={settings.defaultCardFee || ''}
@@ -384,6 +386,7 @@ const Settings: React.FC = () => {
                     <label className="text-xs font-bold text-slate-500 uppercase">Prazo de Compensação (Dias)</label>
                     <input
                       type="number"
+                      inputMode="numeric"
                       className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-100 outline-none"
                       value={settings.defaultCardCompensationDays || ''}
                       onChange={e => handleChange('defaultCardCompensationDays', parseInt(e.target.value))}

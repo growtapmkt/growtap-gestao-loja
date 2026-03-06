@@ -19,6 +19,10 @@ const Customers: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [stats, setStats] = useState<any>(null);
 
+  // Pagination State
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+
   // Form State
   const [formData, setFormData] = useState({
     name: '',
@@ -51,7 +55,12 @@ const Customers: React.FC = () => {
       (c.cpf && c.cpf.includes(searchQuery))
     );
     setFilteredClients(filtered);
+    setPage(1);
   }, [searchQuery, clients]);
+
+  const totalItems = filteredClients.length;
+  const totalPages = Math.ceil(totalItems / limit) || 1;
+  const paginatedClients = filteredClients.slice((page - 1) * limit, page * limit);
 
   useEffect(() => {
     if (selectedClient?.id) {
@@ -326,20 +335,20 @@ const Customers: React.FC = () => {
           <h2 className="text-2xl font-black text-slate-800 tracking-tight">Clientes</h2>
           <p className="text-slate-500 text-xs font-medium">Gerencie seu banco de dados de clientes e histórico.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="relative group min-w-[300px]">
+        <div className="flex flex-col md:flex-row md:items-center gap-3 w-full md:w-auto">
+          <div className="relative group w-full md:min-w-[300px]">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#0158ad] transition-colors" size={16} />
             <input
               type="text"
               placeholder="Pesquisar por nome ou telefone..."
-              className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-4 focus:ring-blue-500/5 focus:border-[#0158ad] transition-all outline-none"
+              className="w-full pl-10 pr-4 py-3 md:py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-4 focus:ring-blue-500/5 focus:border-[#0158ad] transition-all outline-none shadow-sm"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
           <button
             onClick={() => handleOpenForm('create')}
-            className="flex items-center gap-2 px-5 py-2.5 bg-[#0158ad] text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-800 hover:-translate-y-0.5 transition-all shadow-lg shadow-blue-500/10"
+            className="flex items-center justify-center gap-2 w-full md:w-auto px-5 py-3 md:py-2.5 bg-[#0158ad] text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-800 hover:-translate-y-0.5 transition-all shadow-lg shadow-blue-500/10"
           >
             <UserPlus size={18} /> Novo Cliente
           </button>
@@ -375,7 +384,7 @@ const Customers: React.FC = () => {
                   <td colSpan={6} className="py-20 text-center text-slate-400 italic text-xs font-medium">Nenhum cliente encontrado</td>
                 </tr>
               ) : (
-                filteredClients.map((c) => (
+                paginatedClients.map((c) => (
                   <tr key={c.id} className="hover:bg-slate-50/50 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
@@ -475,7 +484,7 @@ const Customers: React.FC = () => {
 
       {/* Mobile List (Cards) */}
       <div className="block md:hidden space-y-4 p-4">
-        {filteredClients.map(c => (
+        {paginatedClients.map(c => (
           <div key={c.id} className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-4">
             <div className="flex justify-between items-start">
               <div className="flex items-center gap-3">
@@ -534,6 +543,50 @@ const Customers: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Pagination Footer */}
+      {(paginatedClients.length > 0 || filteredClients.length > 0) && (
+        <div className="px-6 py-4 bg-slate-50/50 border border-slate-200 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 mt-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-500">Exibir:</span>
+            <select
+              value={limit}
+              onChange={(e) => {
+                setLimit(Number(e.target.value));
+                setPage(1);
+              }}
+              className="px-2 py-1 bg-white border border-slate-200 rounded text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
+            >
+              <option value={10}>10 ▼</option>
+              <option value={20}>20 ▼</option>
+              <option value={30}>30 ▼</option>
+            </select>
+            <span className="text-xs font-bold text-slate-500 ml-2">
+              Mostrando {paginatedClients.length} de {totalItems} itens
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-3 py-1 bg-white border border-slate-200 rounded text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Anterior
+            </button>
+            <span className="text-xs font-bold text-slate-600 px-2">
+              Página {page} de {totalPages}
+            </span>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="px-3 py-1 bg-white border border-slate-200 rounded text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Próxima
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -862,7 +915,7 @@ const Customers: React.FC = () => {
 
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
         <form onSubmit={handleSubmit} className="flex flex-col">
-          <div className="p-8 custom-scrollbar">
+          <div className="p-5 md:p-8 pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-8 custom-scrollbar">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-8">
                 <div className="space-y-5">
@@ -1092,7 +1145,7 @@ const Customers: React.FC = () => {
           </div>
 
           {/* Fixed Mobile Footer / Static Desktop Footer */}
-          <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-100 flex items-center justify-end gap-3 z-50 md:static md:p-6 md:bg-slate-50/30 md:border-t-0 animate-in slide-in-from-bottom-4">
+          <div className="fixed bottom-0 left-0 right-0 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-white border-t border-slate-100 flex items-center justify-end gap-3 z-50 md:static md:p-6 md:pb-6 md:bg-slate-50/30 md:border-t-0 animate-in slide-in-from-bottom-4">
             <button
               type="button"
               onClick={() => setView('list')}
